@@ -58,7 +58,6 @@ User.init(
     },
     mobileNo: {
       type: DataTypes.STRING,
-      primaryKey: true,
       allowNull: false,
       unique: true,
     },

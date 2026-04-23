@@ -135,6 +135,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   ) async {
     _logInfo('SendOTP', 'Sending OTP to ${request.maskedNumber}');
 
+    debugPrint('🚀 [DEBUG] Sending OTP Request to: ${ApiUrls.signup}');
+    debugPrint('🚀 [DEBUG] Body: ${jsonEncode(request.toJson())}');
+
     final response = await httpClient
         .post(
           Uri.parse(ApiUrls.signup),

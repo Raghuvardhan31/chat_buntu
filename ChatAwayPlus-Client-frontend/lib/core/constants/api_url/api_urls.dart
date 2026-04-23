@@ -3,9 +3,9 @@ class ApiUrls {
   // BASE URLs (DEVELOPMENT - Mobile Testing)
   // ========================================
 
-  static const String apiBaseUrl = 'http://192.168.1.16:3200/api';
-  static const String mediaBaseUrl = 'http://192.168.1.16:3200';
-  static const String chatWebSocketUrl = 'ws://192.168.1.16:3200';
+  static const String apiBaseUrl = 'http://192.168.1.19:3200/api';
+  static const String mediaBaseUrl = 'http://192.168.1.19:3200';
+  static const String chatWebSocketUrl = 'ws://192.168.1.19:3200';
 
   // // ========================================
   // // BASE URLs (PRODUCTION)
@@ -267,7 +267,8 @@ class ApiUrls {
   static const String markAllNotificationsRead = '$notificationsBase/read-all';
 
   /// Mark a specific notification as read (PATCH /api/notifications/:id/read)
-  static String markNotificationRead(String id) => '$notificationsBase/$id/read';
+  static String markNotificationRead(String id) =>
+      '$notificationsBase/$id/read';
 
   /// Delete a specific notification (DELETE /api/notifications/:id)
   static String deleteNotificationById(String id) => '$notificationsBase/$id';

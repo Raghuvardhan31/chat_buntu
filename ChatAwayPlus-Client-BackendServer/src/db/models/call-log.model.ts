@@ -75,7 +75,7 @@ class CallLog
 CallLog.init(
 	{
 		id: {
-			type: DataTypes.CHAR(36),
+			type: DataTypes.UUID,
 			defaultValue: DataTypes.UUIDV4,
 			primaryKey: true,
 		},
@@ -86,7 +86,7 @@ CallLog.init(
 			comment: "Unique identifier for the call session",
 		},
 		callerId: {
-			type: DataTypes.CHAR(36),
+			type: DataTypes.UUID,
 			allowNull: false,
 			references: {
 				model: "users",
@@ -95,7 +95,7 @@ CallLog.init(
 			comment: "User who initiated the call",
 		},
 		calleeId: {
-			type: DataTypes.CHAR(36),
+			type: DataTypes.UUID,
 			allowNull: false,
 			references: {
 				model: "users",
@@ -150,7 +150,7 @@ CallLog.init(
 			comment: "Call duration in seconds (only if answered)",
 		},
 		endedBy: {
-			type: DataTypes.CHAR(36),
+			type: DataTypes.UUID,
 			allowNull: true,
 			references: {
 				model: "users",

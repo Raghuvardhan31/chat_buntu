@@ -65,6 +65,11 @@ app.use(express.json());
 
 // Request logging middleware to debug mobile connectivity
 app.use((req, res, next) => {
+  console.log("\n" + "📡".repeat(20));
+  console.log(`📡 [INCOMING] ${req.method} ${req.url}`);
+  console.log(`📡 [HEADERS] ${JSON.stringify(req.headers)}`);
+  console.log(`📡 [BODY]    ${JSON.stringify(req.body)}`);
+  console.log("📡".repeat(20) + "\n");
   console.log(`📢 [${new Date().toISOString()}] ${req.method} ${req.url}`);
   if (req.method === 'POST') {
     console.log('📦 Body:', JSON.stringify(req.body, null, 2));
@@ -166,10 +171,10 @@ async function startServer() {
     await sequelize.sync({ alter: false });
 
     // Start HTTP server with Socket.IO and Express
-    const PORT = process.env.PORT || 3200;
-    httpServer.listen(PORT, () => {
+    const PORT = Number(process.env.PORT) || 3200;
+    httpServer.listen(PORT, "0.0.0.0", () => {
       console.log(`Server is running in ${config.env} mode on port ${PORT}`);
-      console.log("WebSocket server is running");
+      console.log("WebSocket server is running on 0.0.0.0");
     });
     console.log("Database models synchronized.");
   } catch (error) {

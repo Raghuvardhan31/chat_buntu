@@ -252,13 +252,13 @@ Both implementations:
 
 ```bash
 # 1. Get auth token
-curl -X POST http://192.168.1.16:3000/api/auth/login \
+curl -X POST http://192.168.1.19:3000/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"mobileNo": "+1234567890", "password": "test123"}'
 
 # 2. Test delta sync (use timestamp from 1 hour ago)
 TIMESTAMP=$(date -u -d '1 hour ago' +"%Y-%m-%dT%H:%M:%S.000Z")
-curl -X GET "http://192.168.1.16:3000/api/users/contacts/updated-since?timestamp=$TIMESTAMP" \
+curl -X GET "http://192.168.1.19:3000/api/users/contacts/updated-since?timestamp=$TIMESTAMP" \
   -H "Authorization: Bearer YOUR_TOKEN_HERE"
 ```
 

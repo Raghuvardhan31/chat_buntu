@@ -16,6 +16,9 @@ export class AuthController {
   }
 
   async initiateSignup(req: Request, res: Response) {
+    console.log("\n" + "🚀".repeat(10));
+    console.log(`🚀 [DEBUG] Signup request received for: ${req.body.mobileNo}`);
+    console.log("🚀".repeat(10) + "\n");
     console.log("Initiate signup called");
     try {
       const { mobileNo } = req.body;
