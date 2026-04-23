@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Socket.IO Chat Test - ChatAway Plus</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+
+        .status.connected {
+            background: #10b981;
+        }
+
+        .status.disconnected {
+            background: #ef4444;
+        }
+
+        .status.connecting {
+            background: #f59e0b;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0;
+            min-height: 600px;
+        }
+
+        .panel {
+            padding: 30px;
+            overflow-y: auto;
+            max-height: 80vh;
+        }
+
+        .panel-left {
+            border-right: 2px solid #e5e7eb;
+        }
+
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f9fafb;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .section h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section h3 {
+            color: #4b5563;
+            margin-bottom: 10px;
+            font-size: 1em;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #4b5563;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        textarea {
+            min-height: 80px;
+            resize: vertical;
+            font-family: inherit;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-small {
+            width: auto;
+            padding: 8px 16px;
+            font-size: 13px;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+
+        #eventLog {
+            background: #1f2937;
+            color: #10b981;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            max-height: 500px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .event-item {
+            padding: 8px;
+            margin: 4px 0;
+            border-left: 3px solid #10b981;
+            padding-left: 12px;
+        }
+
+        .event-item.error {
+            color: #ef4444;
+            border-left-color: #ef4444;
+        }
+
+        .event-item.warning {
+            color: #f59e0b;
+            border-left-color: #f59e0b;
+        }
+
+        .event-item.info {
+            color: #3b82f6;
+            border-left-color: #3b82f6;
+        }
+
+        .event-item.success {
+            color: #10b981;
+            border-left-color: #10b981;
+        }
+
+        .timestamp {
+            color: #6b7280;
+            font-size: 11px;
+        }
+
+        .flex-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .flex-buttons button {
+            flex: 1;
+        }
+
+        .info-box {
+            background: #dbeafe;
+            border: 1px solid #3b82f6;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 15px;
+            font-size: 13px;
+            color: #1e40af;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+        }
+
+        .message-preview {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 10px;
+        }
+
+        .message-bubble {
+            background: #667eea;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 16px;
+            margin: 5px 0;
+            max-width: fit-content;
+        }
+
+        .message-bubble.received {
+            background: #e5e7eb;
+            color: #1f2937;
+        }
+
+        #connectionInfo {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .info-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .info-card strong {
+            display: block;
+            color: #667eea;
+            margin-bottom: 5px;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        .info-card span {
+            color: #1f2937;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚀 ChatAway Plus - Socket.IO Test Console</h1>
+            <div class="status disconnected" id="connectionStatus">Disconnected</div>
+            <div id="connectionInfo"></div>
+        </header>
+
+        <div class="main-content">
+            <!-- Left Panel: Controls -->
+            <div class="panel panel-left">
+                <!-- Authentication Section -->
+                <div class="section">
+                    <h2>🔐 Authentication</h2>
+                    <div class="info-box">
+                        Connect and authenticate to start using the chat system
+                    </div>
+
+                    <!-- Token Generator -->
+                    <h3>Generate Token (Testing)</h3>
+                    <div class="form-group">
+                        <label>User ID for Token</label>
+                        <input type="text" id="tokenUserId" placeholder="a4f81491-7e28-4632-b9a8-d250905459bb">
+                    </div>
+                    <button id="generateTokenBtn" class="btn-small btn-success">Generate Token</button>
+                    <button id="fetchUsersBtn" class="btn-small" style="margin-top: 10px;">Fetch All Users</button>
+
+                    <hr style="margin: 20px 0; border: none; border-top: 2px solid #e5e7eb;">
+
+                    <!-- Authentication -->
+                    <h3>Socket Authentication</h3>
+                    <div class="form-group">
+                        <label>User ID</label>
+                        <input type="text" id="userId" placeholder="a4f81491-7e28-4632-b9a8-d250905459bb">
+                    </div>
+                    <div class="form-group">
+                        <label>JWT Token</label>
+                        <textarea id="token" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."></textarea>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="loadHistory">
+                        <label for="loadHistory" style="margin: 0;">Load chat history on connect</label>
+                    </div>
+                    <div class="flex-buttons">
+                        <button id="connectBtn" class="btn-success">Connect</button>
+                        <button id="authenticateBtn" disabled>Authenticate</button>
+                        <button id="disconnectBtn" class="btn-danger" disabled>Disconnect</button>
+                    </div>
+                </div>
+
+                <!-- User Status Section -->
+                <div class="section">
+                    <h2>👤 User Status</h2>
+                    <div class="form-group">
+                        <label>Check Status for User ID</label>
+                        <input type="text" id="statusUserId" placeholder="Other user's ID">
+                    </div>
+                    <button id="getUserStatusBtn" disabled>Get User Status</button>
+                </div>
+
+                <!-- Chat Room Section -->
+                <div class="section">
+                    <h2>💬 Chat Room Controls</h2>
+                    <div class="form-group">
+                        <label>Chat With User ID</label>
+                        <input type="text" id="otherUserId" placeholder="Other user's ID">
+                    </div>
+                    <div class="flex-buttons">
+                        <button id="enterChatBtn" class="btn-success" disabled>Enter Chat</button>
+                        <button id="leaveChatBtn" class="btn-danger" disabled>Leave Chat</button>
+                    </div>
+                </div>
+
+                <!-- Typing Indicator Section -->
+                <div class="section">
+                    <h2>⌨️ Typing Indicator</h2>
+                    <div class="form-group">
+                        <label>Receiver User ID</label>
+                        <input type="text" id="typingReceiverId" placeholder="Receiver's ID">
+                    </div>
+                    <div class="flex-buttons">
+                        <button id="startTypingBtn" class="btn-success" disabled>Start Typing</button>
+                        <button id="stopTypingBtn" class="btn-danger" disabled>Stop Typing</button>
+                    </div>
+                </div>
+
+                <!-- Send Message Section -->
+                <div class="section">
+                    <h2>📨 Send Message</h2>
+                    <div class="form-group">
+                        <label>Receiver User ID</label>
+                        <input type="text" id="messageReceiverId" placeholder="Receiver's ID">
+                    </div>
+                    <div class="form-group">
+                        <label>Message Content</label>
+                        <textarea id="messageContent" placeholder="Type your message here..."></textarea>
+                    </div>
+                    <button id="sendMessageBtn" disabled>Send Message</button>
+
+                    <div class="message-preview" id="messagePreview" style="display: none;">
+                        <h3>Preview:</h3>
+                        <div class="message-bubble" id="previewBubble"></div>
+                    </div>
+                </div>
+
+                <!-- Message Status Section -->
+                <div class="section">
+                    <h2>📨 Acknowledge Message Receipt</h2>
+                    <div class="info-box">
+                        💡 <strong>New Flow:</strong> When you receive a message, send an acknowledgment back to the sender.<br>
+                        This will mark the message as 'delivered' and send the full message object to the sender.
+                    </div>
+                    <div class="form-group">
+                        <label>Chat ID to Acknowledge</label>
+                        <input type="text" id="ackChatId" placeholder="chat-id-here">
+                    </div>
+                    <button id="sendAckBtn" class="btn-small" disabled>Send Acknowledgment</button>
+                </div>
+
+                <!-- Message Status Section -->
+                <div class="section">
+                    <h2>✅ Update Message Status</h2>
+                    <div class="info-box">
+                        ⚠️ <strong>Important:</strong> Only the <strong>RECEIVER</strong> can update message status!<br>
+                        You must authenticate as the message receiver, not the sender.<br>
+                        Example: If you sent a message to User B, authenticate as User B to mark it as read.
+                    </div>
+                    <div class="form-group">
+                        <label>Chat IDs (comma-separated)</label>
+                        <input type="text" id="chatIds" placeholder="msg-123, msg-456, msg-789">
+                    </div>
+                    <h3>Status Update Type:</h3>
+                    <div class="flex-buttons">
+                        <button id="markDeliveredBtn" class="btn-small" disabled>Mark Delivered</button>
+                        <button id="markReadBtn" class="btn-small" disabled>Mark Read</button>
+                        <button id="markBothBtn" class="btn-small" disabled>Mark Both</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Event Log -->
+            <div class="panel">
+                <div class="section">
+                    <h2>📊 Event Log</h2>
+                    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                        <button id="clearLogBtn" class="btn-small btn-danger">Clear Log</button>
+                        <button id="exportLogBtn" class="btn-small">Export Log</button>
+                    </div>
+                    <div id="eventLog">Waiting for connection...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let socket = null;
+        let isAuthenticated = false;
+        let currentUserId = null;
+        let currentSocketId = null;
+
+        // DOM Elements
+        const elements = {
+            connectionStatus: document.getElementById('connectionStatus'),
+            connectionInfo: document.getElementById('connectionInfo'),
+            eventLog: document.getElementById('eventLog'),
+
+            // Buttons
+            connectBtn: document.getElementById('connectBtn'),
+            authenticateBtn: document.getElementById('authenticateBtn'),
+            disconnectBtn: document.getElementById('disconnectBtn'),
+            generateTokenBtn: document.getElementById('generateTokenBtn'),
+            fetchUsersBtn: document.getElementById('fetchUsersBtn'),
+            getUserStatusBtn: document.getElementById('getUserStatusBtn'),
+            enterChatBtn: document.getElementById('enterChatBtn'),
+            leaveChatBtn: document.getElementById('leaveChatBtn'),
+            startTypingBtn: document.getElementById('startTypingBtn'),
+            stopTypingBtn: document.getElementById('stopTypingBtn'),
+            sendMessageBtn: document.getElementById('sendMessageBtn'),
+            sendAckBtn: document.getElementById('sendAckBtn'),
+            markDeliveredBtn: document.getElementById('markDeliveredBtn'),
+            markReadBtn: document.getElementById('markReadBtn'),
+            markBothBtn: document.getElementById('markBothBtn'),
+            clearLogBtn: document.getElementById('clearLogBtn'),
+            exportLogBtn: document.getElementById('exportLogBtn'),
+
+            // Inputs
+            tokenUserId: document.getElementById('tokenUserId'),
+            userId: document.getElementById('userId'),
+            token: document.getElementById('token'),
+            loadHistory: document.getElementById('loadHistory'),
+            statusUserId: document.getElementById('statusUserId'),
+            otherUserId: document.getElementById('otherUserId'),
+            typingReceiverId: document.getElementById('typingReceiverId'),
+            messageReceiverId: document.getElementById('messageReceiverId'),
+            messageContent: document.getElementById('messageContent'),
+            ackChatId: document.getElementById('ackChatId'),
+            chatIds: document.getElementById('chatIds'),
+            messagePreview: document.getElementById('messagePreview'),
+            previewBubble: document.getElementById('previewBubble')
+        };
+
+        // Log Event
+        function logEvent(message, type = 'info', data = null) {
+            const timestamp = new Date().toLocaleTimeString();
+            const eventItem = document.createElement('div');
+            eventItem.className = `event-item ${type}`;
+
+            let content = `<span class="timestamp">[${timestamp}]</span> ${message}`;
+            if (data) {
+                content += `\n${JSON.stringify(data, null, 2)}`;
+            }
+
+            eventItem.innerHTML = content;
+            elements.eventLog.appendChild(eventItem);
+            elements.eventLog.scrollTop = elements.eventLog.scrollHeight;
+        }
+
+        // Update UI State
+        function updateUIState() {
+            const connected = socket && socket.connected;
+
+            elements.connectBtn.disabled = connected;
+            elements.disconnectBtn.disabled = !connected;
+            elements.authenticateBtn.disabled = !connected || isAuthenticated;
+
+            elements.getUserStatusBtn.disabled = !isAuthenticated;
+            elements.enterChatBtn.disabled = !isAuthenticated;
+            elements.leaveChatBtn.disabled = !isAuthenticated;
+            elements.startTypingBtn.disabled = !isAuthenticated;
+            elements.stopTypingBtn.disabled = !isAuthenticated;
+            elements.sendMessageBtn.disabled = !isAuthenticated;
+            elements.sendAckBtn.disabled = !isAuthenticated;
+            elements.markDeliveredBtn.disabled = !isAuthenticated;
+            elements.markReadBtn.disabled = !isAuthenticated;
+            elements.markBothBtn.disabled = !isAuthenticated;
+
+            // Update connection status
+            if (connected && isAuthenticated) {
+                elements.connectionStatus.textContent = 'Connected & Authenticated ✓';
+                elements.connectionStatus.className = 'status connected';
+            } else if (connected) {
+                elements.connectionStatus.textContent = 'Connected (Not Authenticated)';
+                elements.connectionStatus.className = 'status connecting';
+            } else {
+                elements.connectionStatus.textContent = 'Disconnected';
+                elements.connectionStatus.className = 'status disconnected';
+            }
+        }
+
+        // Update Connection Info
+        function updateConnectionInfo() {
+            if (socket && socket.connected) {
+                elements.connectionInfo.innerHTML = `
+                    <div class="info-card">
+                        <strong>Socket ID</strong>
+                        <span>${currentSocketId || 'N/A'}</span>
+                    </div>
+                    <div class="info-card">
+                        <strong>User ID</strong>
+                        <span>${currentUserId || 'N/A'}</span>
+                    </div>
+                `;
+            } else {
+                elements.connectionInfo.innerHTML = '';
+            }
+        }
+
+        // Connect to Socket
+        elements.connectBtn.addEventListener('click', () => {
+            if (socket) {
+                socket.disconnect();
+            }
+
+            logEvent('Connecting to server...', 'info');
+
+            socket = io('http://192.168.1.16:3200', {
+                transports: ['websocket', 'polling'],
+                reconnection: true,
+                reconnectionDelay: 1000,
+                reconnectionDelayMax: 5000,
+                reconnectionAttempts: 5
+            });
+
+            setupSocketListeners();
+        });
+
+        // Generate Token
+        elements.generateTokenBtn.addEventListener('click', async () => {
+            const userId = elements.tokenUserId.value.trim();
+
+            if (!userId) {
+                logEvent('Please provide a user ID', 'error');
+                return;
+            }
+
+            try {
+                logEvent('Generating token for user: ' + userId, 'info');
+
+                const response = await fetch('http://192.168.1.16:3200/api/test/generate-token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ userId })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    logEvent('✅ Token generated successfully!', 'success', data);
+
+                    // Auto-fill the form
+                    elements.userId.value = data.userId;
+                    elements.token.value = data.token;
+
+                    logEvent('Token auto-filled in the authentication form', 'info');
+                } else {
+                    logEvent('❌ Failed to generate token', 'error', data);
+                }
+            } catch (error) {
+                logEvent('❌ Error generating token', 'error', { error: error.message });
+            }
+        });
+
+        // Fetch Users
+        elements.fetchUsersBtn.addEventListener('click', async () => {
+            try {
+                logEvent('Fetching users...', 'info');
+
+                const response = await fetch('http://192.168.1.16:3200/api/test/users');
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    logEvent('✅ Users fetched successfully', 'success');
+                    logEvent('Available Users:', 'info', data.users);
+
+                    // Auto-fill first user if available
+                    if (data.users.length > 0) {
+                        elements.tokenUserId.value = data.users[0].id;
+                        logEvent(`First user auto-filled: ${data.users[0].firstName || 'Unknown'} (${data.users[0].id})`, 'info');
+                    }
+                } else {
+                    logEvent('❌ Failed to fetch users', 'error', data);
+                }
+            } catch (error) {
+                logEvent('❌ Error fetching users', 'error', { error: error.message });
+            }
+        });
+
+        // Authenticate
+        elements.authenticateBtn.addEventListener('click', () => {
+            const userId = elements.userId.value.trim();
+            const token = elements.token.value.trim();
+            const loadHistory = elements.loadHistory.checked;
+
+            if (!userId || !token) {
+                logEvent('Please provide both User ID and Token', 'error');
+                return;
+            }
+
+            logEvent('Sending authentication...', 'info');
+            socket.emit('authenticate', {
+                userId: userId,
+                token: token,
+                loadHistory: loadHistory
+            });
+        });
+
+        // Disconnect
+        elements.disconnectBtn.addEventListener('click', () => {
+            if (socket) {
+                socket.disconnect();
+                logEvent('Manually disconnected', 'warning');
+            }
+        });
+
+        // Get User Status
+        elements.getUserStatusBtn.addEventListener('click', () => {
+            const userId = elements.statusUserId.value.trim();
+            if (!userId) {
+                logEvent('Please provide a user ID', 'error');
+                return;
+            }
+
+            logEvent(`Requesting status for user: ${userId}`, 'info');
+            socket.emit('get-user-status', { userId });
+        });
+
+        // Enter Chat
+        elements.enterChatBtn.addEventListener('click', () => {
+            const otherUserId = elements.otherUserId.value.trim();
+            if (!otherUserId) {
+                logEvent('Please provide other user ID', 'error');
+                return;
+            }
+
+            logEvent(`Entering chat with: ${otherUserId}`, 'info');
+            socket.emit('enter-chat', {
+                userId: currentUserId,
+                otherUserId: otherUserId
+            });
+        });
+
+        // Leave Chat
+        elements.leaveChatBtn.addEventListener('click', () => {
+            logEvent('Leaving current chat', 'info');
+            socket.emit('leave-chat', {
+                userId: currentUserId
+            });
+        });
+
+        // Start Typing
+        elements.startTypingBtn.addEventListener('click', () => {
+            const receiverId = elements.typingReceiverId.value.trim();
+            if (!receiverId) {
+                logEvent('Please provide receiver ID', 'error');
+                return;
+            }
+
+            logEvent(`Sending typing indicator to: ${receiverId}`, 'info');
+            socket.emit('typing', {
+                senderId: currentUserId,
+                receiverId: receiverId,
+                isTyping: true
+            });
+        });
+
+        // Stop Typing
+        elements.stopTypingBtn.addEventListener('click', () => {
+            const receiverId = elements.typingReceiverId.value.trim();
+            if (!receiverId) {
+                logEvent('Please provide receiver ID', 'error');
+                return;
+            }
+
+            logEvent(`Stopping typing indicator to: ${receiverId}`, 'info');
+            socket.emit('typing', {
+                senderId: currentUserId,
+                receiverId: receiverId,
+                isTyping: false
+            });
+        });
+
+        // Send Message
+        elements.sendMessageBtn.addEventListener('click', () => {
+            const receiverId = elements.messageReceiverId.value.trim();
+            const message = elements.messageContent.value.trim();
+
+            if (!receiverId || !message) {
+                logEvent('Please provide both receiver ID and message', 'error');
+                return;
+            }
+
+            logEvent(`Sending message to: ${receiverId}`, 'info');
+            socket.emit('private-message', {
+                senderId: currentUserId,
+                receiverId: receiverId,
+                message: message
+            });
+
+            // Show preview
+            elements.previewBubble.textContent = message;
+            elements.messagePreview.style.display = 'block';
+        });
+
+        // Message preview
+        elements.messageContent.addEventListener('input', (e) => {
+            if (e.target.value.trim()) {
+                elements.previewBubble.textContent = e.target.value;
+                elements.messagePreview.style.display = 'block';
+            } else {
+                elements.messagePreview.style.display = 'none';
+            }
+        });
+
+        // Send Acknowledgment
+        elements.sendAckBtn.addEventListener('click', () => {
+            const chatId = elements.ackChatId.value.trim();
+
+            if (!chatId) {
+                logEvent('Please provide a chat ID', 'error');
+                return;
+            }
+
+            const data = {
+                chatId: chatId,
+                receiverDeliveryChannel: 'socket'
+            };
+
+            logEvent(`Sending acknowledgment for chat: ${chatId}`, 'info', data);
+            socket.emit('message-received-ack', data);
+        });
+
+        // Mark Delivered
+        elements.markDeliveredBtn.addEventListener('click', () => {
+            updateMessageStatus('delivered');
+        });
+
+        // Mark Read
+        elements.markReadBtn.addEventListener('click', () => {
+            updateMessageStatus('read');
+        });
+
+        // Mark Both
+        elements.markBothBtn.addEventListener('click', () => {
+            updateMessageStatus('both');
+        });
+
+        function updateMessageStatus(statusType) {
+            const chatIds = elements.chatIds.value.trim().split(',').map(id => id.trim()).filter(id => id);
+
+            if (chatIds.length === 0) {
+                logEvent('Please provide chat IDs', 'error');
+                return;
+            }
+
+            const data = {
+                chatIds: chatIds,
+                status: statusType
+            };
+
+            logEvent(`Updating message status to: ${statusType}`, 'info', data);
+            socket.emit('update-message-status', data);
+        }
+
+        // Clear Log
+        elements.clearLogBtn.addEventListener('click', () => {
+            elements.eventLog.innerHTML = '';
+            logEvent('Log cleared', 'info');
+        });
+
+        // Export Log
+        elements.exportLogBtn.addEventListener('click', () => {
+            const logContent = elements.eventLog.innerText;
+            const blob = new Blob([logContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `socket-log-${Date.now()}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+            logEvent('Log exported', 'success');
+        });
+
+        // Setup Socket Listeners
+        function setupSocketListeners() {
+            // Connection Events
+            socket.on('connect', () => {
+                currentSocketId = socket.id;
+                logEvent('✅ Connected to server', 'success', { socketId: socket.id });
+                updateUIState();
+                updateConnectionInfo();
+            });
+
+            socket.on('disconnect', (reason) => {
+                isAuthenticated = false;
+                currentUserId = null;
+                currentSocketId = null;
+                logEvent('❌ Disconnected from server', 'error', { reason });
+                updateUIState();
+                updateConnectionInfo();
+            });
+
+            socket.on('connect_error', (error) => {
+                logEvent('❌ Connection error', 'error', { error: error.message });
+            });
+
+            // Authentication Events
+            socket.on('authenticated', (data) => {
+                isAuthenticated = true;
+                currentUserId = data.userId;
+                currentSocketId = data.socketId;
+                logEvent('✅ Successfully authenticated', 'success', data);
+                updateUIState();
+                updateConnectionInfo();
+            });
+
+            socket.on('authentication_error', (data) => {
+                isAuthenticated = false;
+                logEvent('❌ Authentication failed', 'error', data);
+                updateUIState();
+            });
+
+            socket.on('force-disconnect', (data) => {
+                logEvent('⚠️ Force disconnected', 'warning', data);
+            });
+
+            // User Status Events
+            socket.on('user-status-response', (data) => {
+                logEvent('👤 User status received', 'info', data);
+            });
+
+            socket.on('user-status-changed', (data) => {
+                logEvent('👤 User status changed', 'info', data);
+            });
+
+            // Typing Events
+            socket.on('user-typing', (data) => {
+                logEvent('⌨️ User typing indicator', 'info', data);
+            });
+
+            // Message Events
+            socket.on('new-message', (data) => {
+                logEvent('📨 New message received', 'success', data);
+                // Auto-fill the acknowledgment field
+                if (elements.ackChatId) {
+                    elements.ackChatId.value = data.chatId;
+                }
+            });
+
+            socket.on('message-sent', (data) => {
+                logEvent('✅ Message sent successfully', 'success', data);
+                elements.messageContent.value = '';
+                elements.messagePreview.style.display = 'none';
+            });
+
+            socket.on('message-error', (data) => {
+                logEvent('❌ Message error', 'error', data);
+            });
+
+            // Acknowledgment Events
+            socket.on('ack-acknowledged', (data) => {
+                logEvent('✅ Acknowledgment confirmed', 'success', data);
+            });
+
+            socket.on('ack-error', (data) => {
+                logEvent('❌ Acknowledgment error', 'error', data);
+            });
+
+            socket.on('message-status-update', (data) => {
+                logEvent('📬 Message status update received!', 'success', {
+                    chatId: data.chatId,
+                    status: data.status,
+                    updatedAt: data.updatedAt,
+                    messageObject: data.messageObject,
+                    note: `Full message object included with status: ${data.status}`
+                });
+            });
+
+            socket.on('message-deleted', (data) => {
+                logEvent('🗑️ Message deleted', 'warning', data);
+            });
+
+            // Status Update Events
+            socket.on('status-update-acknowledged', (data) => {
+                logEvent('✅ Status update acknowledged', 'success', data);
+            });
+
+            socket.on('status-update-error', (data) => {
+                logEvent('❌ Status update error', 'error', data);
+            });
+        }
+
+        // Initialize
+        updateUIState();
+        logEvent('Socket.IO Test Console initialized', 'info');
+        logEvent('Ready to connect. Please enter your credentials and click Connect.', 'info');
+    </script>
+</body>
+</html>

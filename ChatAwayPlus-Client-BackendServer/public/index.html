@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatAway+ - Discover Your Next Adventure</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Header */
+        header {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 0;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(45deg, #ff6b6b, #ffd93d);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+            gap: 2rem;
+        }
+
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: linear-gradient(45deg, #ff6b6b, #ffd93d);
+            transition: width 0.3s ease;
+        }
+
+        .nav-links a:hover::after {
+            width: 100%;
+        }
+
+        /* Hero Section */
+        .hero {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000"><defs><pattern id="grid" width="50" height="50" patternUnits="userSpaceOnUse"><path d="M 50 0 L 0 0 0 50" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"/></pattern></defs><rect width="100%" height="100%" fill="url(%23grid)"/></svg>');
+            animation: float 20s infinite linear;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+            100% { transform: translateY(0px); }
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 2;
+        }
+
+        .hero h1 {
+            font-size: 4rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            background: linear-gradient(45deg, #ff6b6b, #ffd93d, #4ecdc4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: slideUp 1s ease-out;
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+            animation: slideUp 1s ease-out 0.2s both;
+        }
+
+        .cta-button {
+            background: linear-gradient(45deg, #ff6b6b, #ffd93d);
+            color: white;
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            font-weight: 600;
+            box-shadow: 0 10px 30px rgba(255, 107, 107, 0.3);
+            animation: slideUp 1s ease-out 0.4s both;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(255, 107, 107, 0.4);
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Features Section */
+        .features {
+            padding: 100px 0;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+        }
+
+        .features h2 {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 3rem;
+            font-weight: 700;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .feature-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .feature-card:hover {
+            transform: translateY(-10px);
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(45deg, #ff6b6b, #ffd93d);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .feature-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .feature-card p {
+            opacity: 0.9;
+            line-height: 1.6;
+        }
+
+        /* App Preview */
+        .app-preview {
+            padding: 100px 0;
+            text-align: center;
+        }
+
+        .app-preview h2 {
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+            font-weight: 700;
+        }
+
+        .phone-mockup {
+            width: 300px;
+            height: 600px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border-radius: 40px;
+            margin: 0 auto;
+            position: relative;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3);
+            animation: phoneFloat 6s ease-in-out infinite;
+        }
+
+        @keyframes phoneFloat {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(2deg); }
+        }
+
+        .phone-screen {
+            position: absolute;
+            top: 50px;
+            left: 25px;
+            right: 25px;
+            bottom: 50px;
+            background: linear-gradient(135deg, #4ecdc4, #44a08d);
+            border-radius: 30px;
+            overflow: hidden;
+        }
+
+        .screen-content {
+            padding: 20px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .screen-content h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .screen-content p {
+            opacity: 0.9;
+            text-align: center;
+        }
+
+        /* Download Section */
+        .download {
+            padding: 100px 0;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            text-align: center;
+        }
+
+        .download h2 {
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+            font-weight: 700;
+        }
+
+        .download-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .download-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 15px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .download-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-3px);
+        }
+
+        /* Footer */
+        footer {
+            padding: 50px 0;
+            text-align: center;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .footer-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .footer-section h3 {
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .footer-section a {
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .footer-section a:hover {
+            color: white;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+            
+            .nav-links {
+                display: none;
+            }
+            
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .download-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+
+        /* Floating elements */
+        .floating-element {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            animation: floatRandom 8s ease-in-out infinite;
+        }
+
+        .floating-element:nth-child(1) {
+            width: 60px;
+            height: 60px;
+            top: 20%;
+            left: 10%;
+            animation-delay: 0s;
+        }
+
+        .floating-element:nth-child(2) {
+            width: 80px;
+            height: 80px;
+            top: 60%;
+            right: 15%;
+            animation-delay: 2s;
+        }
+
+        .floating-element:nth-child(3) {
+            width: 40px;
+            height: 40px;
+            bottom: 30%;
+            left: 20%;
+            animation-delay: 4s;
+        }
+
+        @keyframes floatRandom {
+            0%, 100% { transform: translateY(0px) translateX(0px); }
+            25% { transform: translateY(-20px) translateX(10px); }
+            50% { transform: translateY(-10px) translateX(-15px); }
+            75% { transform: translateY(-30px) translateX(5px); }
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 5% auto;
+            padding: 0;
+            width: 90%;
+            max-width: 800px;
+            max-height: 80vh;
+            border-radius: 20px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px 30px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            color: white;
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+
+        .close {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .close:hover,
+        .close:focus {
+            color: white;
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .modal-body {
+            padding: 30px;
+            max-height: 60vh;
+            overflow-y: auto;
+            color: white;
+            line-height: 1.6;
+        }
+
+        .modal-body h3 {
+            color: #ffd93d;
+            margin-top: 25px;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+
+        .modal-body h3:first-child {
+            margin-top: 0;
+        }
+
+        .modal-body p {
+            margin-bottom: 15px;
+            opacity: 0.9;
+        }
+
+        .modal-body ul {
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+
+        .modal-body li {
+            margin-bottom: 8px;
+            opacity: 0.9;
+        }
+
+        /* Custom scrollbar for modal */
+        .modal-body::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .modal-body::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        .modal-body::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+        }
+
+        .modal-body::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <div class="floating-element"></div>
+    <div class="floating-element"></div>
+    <div class="floating-element"></div>
+
+    <header>
+        <div class="container">
+            <nav>
+                <div class="logo">ChatAway+</div>
+                <ul class="nav-links">
+                    <li><a href="#home">Home</a></li>
+                    <li><a href="#features">Features</a></li>
+                    <li><a href="#download">Download</a></li>
+                    <li><a href="#contact">Contact</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <section class="hero" id="home">
+        <div class="container">
+            <div class="hero-content">
+                <h1>Discover Your Next Adventure</h1>
+                <p>Connect with friends, share your adventures, and preserve every precious travel memory in one beautiful app.</p>
+                <a href="#download" class="cta-button">Start Your Journey</a>
+            </div>
+        </div>
+    </section>
+
+    <section class="features" id="features">
+        <div class="container">
+            <h2>Connect, Share & Remember</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">💬</div>
+                    <h3>Real-Time Chat</h3>
+                    <p>Connect instantly with fellow travelers through our built-in messaging system. Share tips, ask questions, and get advice from locals.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">👥</div>
+                    <h3>Connect with Friends</h3>
+                    <p>Find and connect with your friends to share your travel experiences. Plan trips together and stay updated on each other's adventures.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📸</div>
+                    <h3>Upload & Share Photos</h3>
+                    <p>Capture and share your travel moments instantly. Upload photos from your adventures and inspire others with your journey.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎨</div>
+                    <h3>Store Your Memories</h3>
+                    <p>Create beautiful digital scrapbooks of your travels. Organize photos, notes, and memories in personalized travel journals.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="app-preview">
+        <div class="container">
+            <h2>Experience the App</h2>
+            <div class="phone-mockup">
+                <div class="phone-screen">
+                    <div class="screen-content">
+                        <h3>Share Your Story</h3>
+                        <p>Chat with friends, upload photos, and create lasting memories of your incredible journeys.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="download" id="download">
+        <div class="container">
+            <h2>Download ChatAway+ Today</h2>
+            <p>Join millions of travelers who trust ChatAway+ for their adventures</p>
+            <div class="download-buttons">
+                <a href="#" class="download-btn">📱 Download for iOS</a>
+                <a href="#" class="download-btn">🤖 Download for Android</a>
+            </div>
+        </div>
+    </section>
+
+    <footer id="contact">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>Company</h3>
+                    <p><a href="#">About Us</a></p>
+                    <p><a href="#">Careers</a></p>
+                    <p><a href="#">Press</a></p>
+                </div>
+                <div class="footer-section">
+                    <h3>Support</h3>
+                    <p><a href="#">Help Center</a></p>
+                    <p><a href="#contact">Contact</a></p>
+                    <p><a href="/privacy-policy">Privacy Policy</a></p>
+                    <p><a href="/terms-conditions">Terms & Conditions</a></p>
+                </div>
+                <div class="footer-section">
+                    <h3>Contact Info</h3>
+                    <p>📧 support@chatawayplus.com</p>
+                    <!-- <p>📱 +1 (555) 123-4567</p> -->
+                    <!-- <p>🏢 456 Adventure Blvd<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Suite 200<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Travel City, TC 54321</p> -->
+                </div>
+                <div class="footer-section">
+                    <h3>Follow Us</h3>
+                    <p><a href="#">Twitter</a></p>
+                    <p><a href="#">Instagram</a></p>
+                    <p><a href="#">Facebook</a></p>
+                </div>
+            </div>
+            <p>&copy; 2025 ChatAway+. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Privacy Policy Modal -->
+    <div id="privacyModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Privacy Policy</h2>
+                <span class="close" onclick="closeModal('privacyModal')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p><strong>Last updated:</strong> August 14, 2025</p>
+                
+                <h3>1. Information We Collect</h3>
+                <p>We collect information you provide directly to us, such as when you create an account, upload photos, send messages, or contact us for support.</p>
+                <ul>
+                    <li><strong>Personal Information:</strong> Name, email address, profile picture, and travel preferences</li>
+                    <li><strong>Content:</strong> Photos, messages, travel memories, and location data you choose to share</li>
+                    <li><strong>Usage Data:</strong> How you interact with our app, features used, and performance metrics</li>
+                    <li><strong>Device Information:</strong> Device type, operating system, and unique identifiers</li>
+                </ul>
+
+                <h3>2. How We Use Your Information</h3>
+                <p>We use the information we collect to provide, maintain, and improve our services:</p>
+                <ul>
+                    <li>Enable chat and social features with friends and other users</li>
+                    <li>Store and organize your travel memories and photos</li>
+                    <li>Provide personalized recommendations and content</li>
+                    <li>Send notifications about friend activity and app updates</li>
+                    <li>Ensure app security and prevent fraud</li>
+                </ul>
+
+                <h3>3. Information Sharing</h3>
+                <p>We share your information only in the following circumstances:</p>
+                <ul>
+                    <li><strong>With Friends:</strong> Content you choose to share with connected friends</li>
+                    <li><strong>Public Content:</strong> Photos and memories you mark as public</li>
+                    <li><strong>Service Providers:</strong> Third-party services that help us operate the app</li>
+                    <li><strong>Legal Requirements:</strong> When required by law or to protect safety</li>
+                </ul>
+
+                <h3>4. Data Security</h3>
+                <p>We implement appropriate security measures to protect your personal information against unauthorized access, alteration, disclosure, or destruction. This includes encryption of sensitive data and regular security audits.</p>
+
+                <h3>5. Your Privacy Rights</h3>
+                <p>You have the right to:</p>
+                <ul>
+                    <li>Access, update, or delete your personal information</li>
+                    <li>Control who can see your content and travel memories</li>
+                    <li>Download a copy of your data</li>
+                    <li>Opt out of certain communications</li>
+                    <li>Delete your account and associated data</li>
+                </ul>
+
+                <h3>6. Data Retention</h3>
+                <p>We retain your information for as long as your account is active or as needed to provide services. You can delete specific content at any time, and we'll remove it from our servers within 30 days.</p>
+
+                <h3>7. Children's Privacy</h3>
+                <p>Our service is not intended for children under 13. We do not knowingly collect personal information from children under 13. If we become aware that we have collected such information, we will delete it immediately.</p>
+
+                <h3>8. International Data Transfers</h3>
+                <p>Your information may be transferred to and processed in countries other than your own. We ensure appropriate safeguards are in place to protect your data during these transfers.</p>
+
+                <h3>9. Changes to This Policy</h3>
+                <p>We may update this privacy policy from time to time. We'll notify you of any material changes through the app or by email. Your continued use of the service after changes become effective constitutes acceptance of the new policy.</p>
+
+                <h3>10. Contact Us</h3>
+                <p>If you have any questions about this privacy policy or our privacy practices, please contact us at:</p>
+                <p>Email: privacy@chatawayplus.com<br>
+                <!-- Phone: +1 (555) 123-4567<br> -->
+                Address: 456 Adventure Blvd, Suite 200, Travel City, TC 54321</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Terms and Conditions Modal -->
+    <div id="termsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Terms & Conditions</h2>
+                <span class="close" onclick="closeModal('termsModal')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p><strong>Last updated:</strong> August 14, 2025</p>
+                
+                <h3>1. Acceptance of Terms</h3>
+                <p>By downloading, accessing, or using the ChatAway+ mobile application, you agree to be bound by these Terms and Conditions. If you do not agree to these terms, please do not use our service.</p>
+
+                <h3>2. Description of Service</h3>
+                <p>ChatAway+ is a social travel application that allows users to:</p>
+                <ul>
+                    <li>Connect and chat with friends and other travelers</li>
+                    <li>Upload and share travel photos and experiences</li>
+                    <li>Store travel memories in digital scrapbooks</li>
+                    <li>Discover and explore travel content from other users</li>
+                </ul>
+
+                <h3>3. User Accounts</h3>
+                <p>To use certain features, you must create an account and provide accurate, current, and complete information. You are responsible for:</p>
+                <ul>
+                    <li>Maintaining the confidentiality of your account credentials</li>
+                    <li>All activities that occur under your account</li>
+                    <li>Notifying us immediately of any unauthorized use</li>
+                </ul>
+
+                <h3>4. User Content and Conduct</h3>
+                <p>You retain ownership of content you upload but grant us a license to use, display, and distribute it within our service. You agree not to:</p>
+                <ul>
+                    <li>Post illegal, harmful, or offensive content</li>
+                    <li>Violate others' intellectual property rights</li>
+                    <li>Harass, threaten, or impersonate other users</li>
+                    <li>Share false or misleading information</li>
+                    <li>Attempt to hack or disrupt the service</li>
+                </ul>
+
+                <h3>5. Privacy and Data Protection</h3>
+                <p>Your privacy is important to us. Our collection and use of personal information is governed by our Privacy Policy, which is incorporated into these terms by reference.</p>
+
+                <h3>6. Intellectual Property</h3>
+                <p>The ChatAway+ app, including its design, features, and content (excluding user-generated content), is owned by us and protected by copyright and other intellectual property laws.</p>
+
+                <h3>7. Prohibited Uses</h3>
+                <p>You may not use our service:</p>
+                <ul>
+                    <li>For any unlawful purpose or to solicit unlawful acts</li>
+                    <li>To violate any international, federal, provincial, or state regulations or laws</li>
+                    <li>To transmit or procure sending of advertising or promotional material</li>
+                    <li>To impersonate or attempt to impersonate other users or entities</li>
+                    <li>In any way that could damage, disable, or impair the service</li>
+                </ul>
+
+                <h3>8. Service Availability</h3>
+                <p>We strive to keep the service available, but we cannot guarantee 100% uptime. We may temporarily or permanently discontinue features or the entire service with or without notice.</p>
+
+                <h3>9. Termination</h3>
+                <p>We may terminate or suspend your account and access to the service immediately, without prior notice, if you breach these terms. Upon termination, your right to use the service stops immediately.</p>
+
+                <h3>10. Disclaimers</h3>
+                <p>The service is provided "as is" and "as available" without any warranties of any kind. We do not guarantee that the service will meet your requirements or be uninterrupted, secure, or error-free.</p>
+
+                <h3>11. Limitation of Liability</h3>
+                <p>To the fullest extent permitted by law, we shall not be liable for any indirect, incidental, special, consequential, or punitive damages, or any loss of profits or revenues.</p>
+
+                <h3>12. Governing Law</h3>
+                <p>These terms are governed by and construed in accordance with the laws of [Your Jurisdiction], without regard to its conflict of law principles.</p>
+
+                <h3>13. Changes to Terms</h3>
+                <p>We reserve the right to modify these terms at any time. We'll notify users of material changes through the app or email. Continued use after changes constitutes acceptance of the new terms.</p>
+
+                <h3>14. Contact Information</h3>
+                <p>For questions about these Terms and Conditions, please contact us at:</p>
+                <p>Email: support@chatawayplus.com<br>
+                <!-- Phone: +1 (555) 123-4567<br> -->
+                <!-- Address: 456 Adventure Blvd, Suite 200, Travel City, TC 54321</p> -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Header background change on scroll
+        window.addEventListener('scroll', function() {
+            const header = document.querySelector('header');
+            if (window.scrollY > 100) {
+                header.style.background = 'rgba(255, 255, 255, 0.15)';
+            } else {
+                header.style.background = 'rgba(255, 255, 255, 0.1)';
+            }
+        });
+
+        // Intersection Observer for feature cards animation
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+
+        // Observe feature cards
+        document.querySelectorAll('.feature-card').forEach(card => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(30px)';
+            card.style.transition = 'all 0.6s ease';
+            observer.observe(card);
+        });
+        // Modal functionality
+        function showPrivacy() {
+            document.getElementById('privacyModal').style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function showTerms() {
+            document.getElementById('termsModal').style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        // Close modal when clicking outside of it
+        window.onclick = function(event) {
+            const privacyModal = document.getElementById('privacyModal');
+            const termsModal = document.getElementById('termsModal');
+            
+            if (event.target === privacyModal) {
+                closeModal('privacyModal');
+            }
+            if (event.target === termsModal) {
+                closeModal('termsModal');
+            }
+        }
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeModal('privacyModal');
+                closeModal('termsModal');
+            }
+        });
+    </script>
+</body>
+</html>

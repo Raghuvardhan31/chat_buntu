@@ -1,0 +1,22 @@
+.env
+uploads/
+__MACOSX/
+.DS_Store
+node_modules/
+dist/
+*.zip
+
+
+/node_modules/*
+/dist
+/build
+/coverage
+/logs
+/temp
+/uploads
+
+
+
+# lock files
+bun.lock
+

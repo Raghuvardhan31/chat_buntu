@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- White background (current) -->
+    <color name="ic_launcher_background">#ffffff</color>
+    
+    <!-- Alternative: Telegram Blue background -->
+    <!-- <color name="ic_launcher_background">#3390EC</color> -->
+    
+    <!-- Alternative: IDE Professional Blue background -->
+    <!-- <color name="ic_launcher_background">#0D5A99</color> -->
+</resources>

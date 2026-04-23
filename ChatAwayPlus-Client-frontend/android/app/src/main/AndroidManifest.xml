@@ -1,0 +1,360 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+
+    xmlns:tools="http://schemas.android.com/tools">
+
+
+
+    <!-- Essential Permissions for ChatAway+ -->
+
+
+
+    <!-- Contacts Permissions - for finding friends and managing contacts -->
+
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
+
+    <uses-permission android:name="android.permission.WRITE_CONTACTS" />
+
+
+
+    <!-- Media Permissions - Android 13+ (API 33+) -->
+
+    <!-- Only READ_MEDIA_IMAGES for profile picture selection -->
+
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+
+
+
+    <!-- Camera Permission - for capturing photos and videos in chat -->
+
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+
+
+
+    <!-- Storage Permissions - Android 12 and below (API 32 and below) -->
+
+    <!-- Only for reading profile pictures from gallery -->
+
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
+
+
+
+    <!-- Network Permission - essential for API calls -->
+
+    <uses-permission android:name="android.permission.INTERNET" />
+
+
+
+    <!-- High Priority Notification Permissions - to prevent FCM delays -->
+
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+
+
+
+    <!-- Notification Permission -->
+
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+
+
+    <!-- Force-remove foreground service permissions injected by plugins (agora, geolocator) -->
+
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" tools:node="remove" />
+
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" tools:node="remove" />
+
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" tools:node="remove" />
+
+
+
+    <!-- Alarm Permission - for service restart scheduling -->
+
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+
+
+
+    <!-- Audio/Voice Call Permissions - for Agora RTC Engine -->
+
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+
+
+
+    <!-- Location Permissions - for sharing current location in chat -->
+
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+
+
+    <!-- Network State - for connection monitoring -->
+
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+
+
+    <!-- Battery Optimization Whitelist - WhatsApp/Telegram style -->
+
+    <!-- Allows requesting user to disable battery optimization for instant messages -->
+
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
+
+
+    <!-- WiFi Lock - Keep WiFi alive in sleep mode for instant notifications -->
+
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+
+
+
+    <!-- Badge Permissions for various launchers -->
+
+    <uses-permission android:name="com.android.launcher.permission.READ_SETTINGS" />
+
+    <uses-permission android:name="com.android.launcher.permission.WRITE_SETTINGS" />
+
+    <uses-permission android:name="com.oppo.launcher.permission.READ_SETTINGS" />
+
+    <uses-permission android:name="com.oppo.launcher.permission.WRITE_SETTINGS" />
+
+    <uses-permission android:name="com.huawei.android.launcher.permission.CHANGE_BADGE" />
+
+    <uses-permission android:name="com.vivo.notification.permission.BADGE_ICON" />
+
+    <uses-permission android:name="com.sonyericsson.home.permission.BROADCAST_BADGE" />
+
+    <!-- Samsung Badge Permissions -->
+
+    <uses-permission android:name="com.sec.android.provider.badge.permission.READ" />
+
+    <uses-permission android:name="com.sec.android.provider.badge.permission.WRITE" />
+
+    <!-- Xiaomi Badge Permissions -->
+
+    <uses-permission android:name="android.permission.READ_APP_BADGE" />
+
+    <!-- ZTE Badge Permission -->
+
+    <uses-permission android:name="com.zte.launcher.permission.READ_BADGE" />
+
+    <uses-permission android:name="com.zte.launcher.permission.WRITE_BADGE" />
+
+    <!-- HTC Badge Permission -->
+
+    <uses-permission android:name="com.htc.launcher.permission.READ_SETTINGS" />
+
+    <uses-permission android:name="com.htc.launcher.permission.UPDATE_SHORTCUT" />
+
+    <application
+        android:label="ChatAway+"
+        android:name="${applicationName}"
+        android:icon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="true">
+
+        <activity
+
+            android:name=".MainActivity"
+
+            android:exported="true"
+
+            android:launchMode="singleTop"
+
+            android:taskAffinity=""
+
+            android:theme="@style/LaunchTheme"
+
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+
+            android:hardwareAccelerated="true"
+
+            android:windowSoftInputMode="adjustResize">
+
+            <!-- Specifies an Android theme to apply to this Activity as soon as
+
+                 the Android process has started. This theme is visible to the user
+
+                 while the Flutter UI initializes. After that, this theme continues
+
+                 to determine the Window background behind the Flutter UI. -->
+
+            <meta-data
+
+              android:name="io.flutter.embedding.android.NormalTheme"
+
+              android:resource="@style/NormalTheme"
+
+              />
+
+            <intent-filter>
+
+                <action android:name="android.intent.action.MAIN"/>
+
+                <category android:name="android.intent.category.LAUNCHER"/>
+
+            </intent-filter>
+
+        </activity>
+
+
+
+        <!-- UCropActivity for image_cropper package -->
+
+        <activity
+
+            android:name="com.yalantis.ucrop.UCropActivity"
+
+            android:screenOrientation="portrait"
+
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
+
+
+
+        <!-- Google Maps API Key - Replace YOUR_API_KEY_HERE with actual key -->
+
+        <meta-data
+
+            android:name="com.google.android.geo.API_KEY"
+
+            android:value="AIzaSyDidTVaAKZPH59UyCNRa2t3vq_Ja45ZUv4" />
+
+
+
+        <!-- Don't delete the meta-data below.
+
+             This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
+
+        <meta-data
+
+            android:name="flutterEmbedding"
+
+            android:value="2" />
+
+
+
+        <!-- Firebase Cloud Messaging Default Notification Channel -->
+
+        <!-- ⚠️ COMMENTED OUT to prevent automatic notification display -->
+
+        <!-- When enabled, Android shows notifications automatically even with background handler -->
+
+        <!-- We want full control over notifications via our background handler -->
+
+
+
+        <meta-data
+
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+
+            android:value="chat_messages" />
+
+
+
+
+
+        <!-- Firebase Cloud Messaging Default Notification Icon -->
+
+        <meta-data
+
+            android:name="com.google.firebase.messaging.default_notification_icon"
+
+            android:resource="@mipmap/ic_launcher" />
+
+
+
+        <!-- Firebase Messaging Background Service - Prevents duplicate notifications -->
+
+        <service
+
+            android:name="io.flutter.plugins.firebase.messaging.FlutterFirebaseMessagingBackgroundService"
+
+            android:permission="android.permission.BIND_JOB_SERVICE"
+
+            android:exported="false">
+
+        </service>
+
+
+
+        <!-- WhatsApp-Style Native FCM Service - Instant notifications even when app killed -->
+
+        <service
+
+            android:name=".ChatAwayFirebaseMessagingService"
+
+            android:enabled="true"
+
+            android:exported="false"
+
+            android:directBootAware="true">
+
+            <intent-filter>
+
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+
+            </intent-filter>
+
+        </service>
+
+
+
+        <!-- Force-remove foreground services injected by plugins (geolocator, agora) -->
+
+        <service
+
+            android:name="com.baseflow.geolocator.GeolocatorLocationService"
+
+            tools:node="remove" />
+
+        <service
+
+            android:name="io.agora.rtc2.extensions.MediaProjectionMgr$LocalScreenSharingService"
+
+            tools:node="remove" />
+
+    </application>
+
+    <!-- Required to query activities that can process text, see:
+
+         https://developer.android.com/training/package-visibility and
+
+         https://developer.android.com/reference/android/content/Intent#ACTION_PROCESS_TEXT.
+
+
+
+         In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
+
+    <queries>
+
+        <intent>
+
+            <action android:name="android.intent.action.PROCESS_TEXT"/>
+
+            <data android:mimeType="text/plain"/>
+
+        </intent>
+
+    </queries>
+
+</manifest>
+

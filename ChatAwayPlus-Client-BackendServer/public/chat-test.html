@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chat Test</title>
+    <script>
+        // Set the WebSocket URL for the browser environment
+        window.WEBSOCKET_URL = 'http://192.168.1.16:3200';
+    </script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .auth-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #e3f2fd;
+            border-radius: 4px;
+        }
+        .chat-section {
+            display: none;
+        }
+        .messages {
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .message {
+            margin: 8px 0;
+            padding: 8px 12px;
+            border-radius: 4px;
+            max-width: 70%;
+        }
+        .sent {
+            background-color: #e3f2fd;
+            margin-left: auto;
+        }
+        .received {
+            background-color: #f5f5f5;
+            margin-right: auto;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #666;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #2196f3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #1976d2;
+        }
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+        .error {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Chat Test</h1>
+        
+        <!-- Authentication Section -->
+        <div class="auth-section" id="authSection">
+            <div class="input-group">
+                <label for="token">JWT Token:</label>
+                <input type="text" id="token" placeholder="Enter your JWT token">
+            </div>
+            <button id="connectBtn">Connect</button>
+            <div id="authStatus" class="status"></div>
+        </div>
+
+        <!-- Chat Section -->
+        <div class="chat-section" id="chatSection">
+            <div class="input-group">
+                <label for="receiverId">Chat with User ID:</label>
+                <input type="text" id="receiverId" placeholder="Enter receiver's user ID">
+                <button id="loadHistoryBtn">Load Chat History</button>
+            </div>
+            
+            <div class="messages" id="messages"></div>
+            
+            <div class="input-group">
+                <input type="text" id="messageInput" placeholder="Type your message...">
+                <button id="sendBtn">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include Socket.IO client -->
+    <script type="module">
+        import { ChatService } from '/js/ChatService.js';
+        import { io } from 'https://cdn.socket.io/4.6.0/socket.io.esm.min.js';
+        let chatService;
+        
+        async function connect() {
+            const token = document.getElementById('token').value;
+            if (!token) {
+                showAuthStatus('Please enter a JWT token', false);
+                return;
+            }
+
+            try {
+                chatService = new ChatService();
+                await chatService.initialize(token);
+                
+                // Setup message handler
+                chatService.onNewMessage((message) => {
+                    appendMessage(message);
+                });
+
+                document.getElementById('authSection').style.backgroundColor = '#e8f5e9';
+                document.getElementById('chatSection').style.display = 'block';
+                showAuthStatus('Connected successfully!', true);
+            } catch (error) {
+                showAuthStatus('Connection failed: ' + error.message, false);
+            }
+        }
+
+        async function loadHistory() {
+            const receiverId = document.getElementById('receiverId').value;
+            if (!receiverId) {
+                alert('Please enter a receiver ID');
+                return;
+            }
+
+            try {
+                const messages = await chatService.getChatHistory(receiverId);
+                document.getElementById('messages').innerHTML = '';
+                messages.forEach(message => appendMessage(message));
+            } catch (error) {
+                alert('Failed to load chat history: ' + error.message);
+            }
+        }
+
+        async function sendMessage() {
+            const messageInput = document.getElementById('messageInput');
+            const receiverId = document.getElementById('receiverId').value;
+            const message = messageInput.value.trim();
+
+            if (!message || !receiverId) {
+                alert('Please enter both a message and receiver ID');
+                return;
+            }
+
+            try {
+                await chatService.sendMessage(receiverId, message);
+                messageInput.value = '';
+            } catch (error) {
+                alert('Failed to send message: ' + error.message);
+            }
+        }
+
+        function appendMessage(message) {
+            const messagesDiv = document.getElementById('messages');
+            const messageElement = document.createElement('div');
+            const isSent = message.senderId === chatService.userId;
+            
+            messageElement.className = `message ${isSent ? 'sent' : 'received'}`;
+            messageElement.innerHTML = `
+                <div>${message.message}</div>
+                <small style="color: #666;">${new Date(message.createdAt).toLocaleTimeString()}</small>
+            `;
+            
+            messagesDiv.appendChild(messageElement);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function showAuthStatus(message, isSuccess) {
+            const statusDiv = document.getElementById('authStatus');
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${isSuccess ? 'success' : 'error'}`;
+        }
+
+        // Setup event listeners after functions are defined
+        document.getElementById('connectBtn').addEventListener('click', connect);
+        document.getElementById('loadHistoryBtn').addEventListener('click', loadHistory);
+        document.getElementById('sendBtn').addEventListener('click', sendMessage);
+        document.getElementById('messageInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>
