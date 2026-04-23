@@ -39,18 +39,72 @@ class CallNotifier extends ChangeNotifier {
   CallState get state => _state;
 
   final _localDb = CallHistoryLocalDatasource.instance;
+  final List<StreamSubscription> _subscriptions = [];
+
+  CallNotifier() {
+    _initSignalingListeners();
+  }
+
+  void _initSignalingListeners() {
+    // Listen for call accepted
+    _subscriptions.add(
+      CallSignalingService.instance.callAcceptedStream.listen((data) {
+        if (_state.activeCall != null && _state.activeCall!.callId == data['callId']) {
+          acceptCall();
+        }
+      })
+    );
+
+    // Listen for call rejected
+    _subscriptions.add(
+      CallSignalingService.instance.callRejectedStream.listen((callId) {
+        if (_state.activeCall != null && _state.activeCall!.callId == callId) {
+          endCallWithStatus(CallStatus.rejected);
+        }
+      })
+    );
+
+    // Listen for call ended
+    _subscriptions.add(
+      CallSignalingService.instance.callEndedStream.listen((callId) {
+        if (_state.activeCall != null && _state.activeCall!.callId == callId) {
+          endCallWithStatus(CallStatus.ended);
+        }
+      })
+    );
+
+    // Listen for unavailable
+    _subscriptions.add(
+      CallSignalingService.instance.callUnavailableStream.listen((callId) {
+        if (_state.activeCall != null && _state.activeCall!.callId == callId) {
+          endCallWithStatus(CallStatus.failed);
+        }
+      })
+    );
+  }
+
+  @override
+  void dispose() {
+    for (var sub in _subscriptions) {
+      sub.cancel();
+    }
+    super.dispose();
+  }
 
   /// Initiate an outgoing call
-  void initiateCall({
+  Future<void> initiateCall({
     String? callId,
     required String contactId,
     required String contactName,
     String? contactProfilePic,
     CallType callType = CallType.voice,
-  }) {
+  }) async {
     final effectiveCallId = (callId != null && callId.isNotEmpty)
         ? callId
         : 'call_${DateTime.now().millisecondsSinceEpoch}';
+    
+    final channelName = 'chan_${effectiveCallId}';
+
     _state = _state.copyWith(
       activeCall: ActiveCallState(
         callId: effectiveCallId,
@@ -64,6 +118,20 @@ class CallNotifier extends ChangeNotifier {
       ),
     );
     notifyListeners();
+
+    // 🚀 NEW: Actually tell the server to start the call!
+    try {
+      await CallSignalingService.instance.initiateCall(
+        callId: effectiveCallId,
+        calleeId: contactId,
+        callType: callType,
+        channelName: channelName,
+      );
+    } catch (e) {
+      debugPrint('❌ CallNotifier: Failed to initiate call signal: $e');
+      _state = _state.copyWith(clearActiveCall: true);
+      notifyListeners();
+    }
   }
 
   /// Register an incoming call (so it gets recorded to history)
