@@ -45,7 +45,6 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
 
   String _callStatus = 'Calling...';
   bool _isEnded = false;
-  String? _agoraToken;
   Timer? _ringTimeoutTimer;
 
   // Stream subscriptions
@@ -99,12 +98,6 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
     _ringSub = _signaling.callRingingStream.listen((data) {
       final callId = data['callId'] ?? '';
       if (callId == widget.callId && mounted) {
-        // Store token from ringing event as backup
-        final ringingToken = data['agoraToken'];
-        if (ringingToken != null && ringingToken.isNotEmpty) {
-          _agoraToken ??= ringingToken;
-          debugPrint('📞 OutgoingCall: Stored ringing token as backup');
-        }
         setState(() => _callStatus = 'Ringing...');
       }
     });
@@ -112,16 +105,11 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
     _acceptSub = _signaling.callAcceptedStream.listen((data) {
       final callId = data['callId'] ?? '';
       debugPrint(
-        '📞 OutgoingCall: call-accepted received: callId=$callId, widgetCallId=${widget.callId}, hasToken=${data['agoraToken'] != null}',
+        '📞 OutgoingCall: call-accepted received: callId=$callId, widgetCallId=${widget.callId}',
       );
       if (callId == widget.callId && mounted) {
-        // Use accepted token, fall back to ringing token
-        final acceptedToken = data['agoraToken'];
-        if (acceptedToken != null && acceptedToken.isNotEmpty) {
-          _agoraToken = acceptedToken;
-        }
         debugPrint(
-          '📞 OutgoingCall: Transitioning to ActiveCallPage with token=${_agoraToken != null}',
+          '📞 OutgoingCall: Transitioning to ActiveCallPage',
         );
         _onCallAccepted();
       }
@@ -201,7 +189,6 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
             channelName: widget.channelName,
             callId: widget.callId,
             otherUserId: widget.contactId,
-            agoraToken: _agoraToken,
           )
         : ActiveCallPage(
             contactName: widget.contactName,
@@ -210,7 +197,6 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
             channelName: widget.channelName,
             callId: widget.callId,
             otherUserId: widget.contactId,
-            agoraToken: _agoraToken,
           );
 
     Navigator.of(context).pushReplacement(

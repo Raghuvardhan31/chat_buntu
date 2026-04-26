@@ -176,7 +176,6 @@ class IncomingCallSignal {
   final String? callerProfilePic;
   final CallType callType;
   final String channelName;
-  final String? agoraToken;
 
   const IncomingCallSignal({
     required this.callId,
@@ -185,7 +184,6 @@ class IncomingCallSignal {
     this.callerProfilePic,
     required this.callType,
     required this.channelName,
-    this.agoraToken,
   });
 
   factory IncomingCallSignal.fromJson(Map<String, dynamic> json) {
@@ -198,7 +196,6 @@ class IncomingCallSignal {
           ? CallType.video
           : CallType.voice,
       channelName: (json['channelName'] ?? '').toString(),
-      agoraToken: json['agoraToken'] as String?,
     );
   }
 }
@@ -309,11 +306,10 @@ class CallSignalingService {
       debugPrint('✅ CallSignaling: Call accepted raw data: $data');
       debugPrint('✅ CallSignaling: Data type: ${data.runtimeType}');
       final callId = _extractCallId(data);
-      final agoraToken = data is Map ? data['agoraToken'] as String? : null;
       debugPrint(
-        '✅ CallSignaling: Accepted callId=$callId, hasToken=${agoraToken != null}, tokenPrefix=${agoraToken != null ? agoraToken.substring(0, (agoraToken.length > 10 ? 10 : agoraToken.length)) : "null"}',
+        '✅ CallSignaling: Accepted callId=$callId',
       );
-      _callAcceptedController.add({'callId': callId, 'agoraToken': agoraToken});
+      _callAcceptedController.add({'callId': callId});
     });
 
     // Callee rejected our call
@@ -337,15 +333,14 @@ class CallSignalingService {
       _callUnavailableController.add(callId);
     });
 
-    // Server confirms callee's phone is ringing (includes agoraToken)
+    // Server confirms callee's phone is ringing
     socket.on(CallSocketEvents.callRinging, (data) {
       debugPrint('🔔 CallSignaling: Callee ringing: $data');
       final callId = _extractCallId(data);
-      final agoraToken = data is Map ? data['agoraToken'] as String? : null;
       debugPrint(
-        '🔔 CallSignaling: Ringing callId=$callId, hasToken=${agoraToken != null}',
+        '🔔 CallSignaling: Ringing callId=$callId',
       );
-      _callRingingController.add({'callId': callId, 'agoraToken': agoraToken});
+      _callRingingController.add({'callId': callId});
     });
 
     // Call error from server

@@ -55,7 +55,7 @@ export class ChatService {
 
   constructor(
     baseUrl: string = (typeof window !== "undefined" && window.WEBSOCKET_URL) ||
-      "http://192.168.1.19:3200",
+      "http://192.168.31.165:3200",
   ) {
     this.baseUrl = baseUrl;
     this.token = "";

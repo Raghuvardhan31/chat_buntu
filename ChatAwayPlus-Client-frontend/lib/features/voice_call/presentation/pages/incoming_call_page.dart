@@ -21,7 +21,6 @@ class IncomingCallPage extends ConsumerStatefulWidget {
   final String? contactProfilePic;
   final CallType callType;
   final String channelName;
-  final String? agoraToken;
 
   const IncomingCallPage({
     super.key,
@@ -31,7 +30,6 @@ class IncomingCallPage extends ConsumerStatefulWidget {
     this.contactProfilePic,
     this.callType = CallType.voice,
     required this.channelName,
-    this.agoraToken,
   });
 
   @override
@@ -341,7 +339,6 @@ class _IncomingCallPageState extends ConsumerState<IncomingCallPage>
             channelName: widget.channelName,
             callId: widget.callId,
             otherUserId: widget.callerId,
-            agoraToken: widget.agoraToken,
           )
         : ActiveCallPage(
             contactName: widget.contactName,
@@ -350,7 +347,6 @@ class _IncomingCallPageState extends ConsumerState<IncomingCallPage>
             channelName: widget.channelName,
             callId: widget.callId,
             otherUserId: widget.callerId,
-            agoraToken: widget.agoraToken,
           );
 
     if (!mounted) return;

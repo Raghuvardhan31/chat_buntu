@@ -192,6 +192,11 @@ export interface MultiDeviceSendOptions {
   messageType: 'chat_message' | 'profile_update' | 'chat_picture_like' | 'message_reaction' | 'stories_changed' | 'status_like' | 'incoming_call';
   data: Record<string, string>;
   conversationId?: string;
+  notification?: {
+    title: string;
+    body: string;
+    imageUrl?: string;
+  };
 }
 
 export interface MultiDeviceSendResult {
@@ -472,12 +477,16 @@ export async function sendIncomingCallToUser(params: {
   callerProfilePic?: string;
   callType: 'voice' | 'video';
   channelName: string;
-  agoraToken: string;
 }): Promise<MultiDeviceSendResult> {
   return sendToAllUserDevices({
     userId: params.receiverId,
-    messageUuid: `call-${params.callId}`,
+    messageUuid: `incoming-call-${params.callId}`,
     messageType: 'incoming_call',
+    notification: {
+      title: `Incoming ${params.callType} call`,
+      body: `${params.callerName} is calling...`,
+      imageUrl: params.callerProfilePic || undefined,
+    },
     data: {
       type: 'incoming_call',
       callId: params.callId,
@@ -486,7 +495,6 @@ export async function sendIncomingCallToUser(params: {
       callerProfilePic: params.callerProfilePic || '',
       callType: params.callType,
       channelName: params.channelName,
-      agoraToken: params.agoraToken,
     }
   });
 }

@@ -137,9 +137,6 @@ class AgoraCallService {
           onAudioRoutingChanged: (int routing) {
             debugPrint('🎧 AgoraCallService: Audio routing changed to $routing');
           },
-          onTokenPrivilegeWillExpire: (RtcConnection connection, String token) {
-            debugPrint('⚠️ AgoraCallService: Token will expire soon');
-          },
         ),
       );
 
@@ -172,7 +169,6 @@ class AgoraCallService {
   /// [uid] — local user ID (0 = auto-assign)
   Future<bool> joinVoiceCall({
     required String channelName,
-    String? token,
     int uid = 0,
   }) async {
     if (_engine == null || !_isInitialized) {
@@ -196,15 +192,13 @@ class AgoraCallService {
       // Ensure speaker is off by default for voice calls (earpiece)
       await _engine!.setEnableSpeakerphone(false);
 
-      final effectiveToken = (token != null && token.isNotEmpty)
-          ? token
-          : AgoraConfig.token;
+      // Static authentication - no token required
       debugPrint(
-        '\uD83D\uDD11 AgoraCallService: Using token: ${effectiveToken.isEmpty ? "(empty)" : "${effectiveToken.substring(0, 10)}..."}',
+        '🔧 AgoraCallService: Using static authentication (no token)',
       );
 
       await _engine!.joinChannel(
-        token: effectiveToken,
+        token: '', // Empty token for static authentication
         channelId: channelName,
         uid: uid,
         options: const ChannelMediaOptions(
@@ -224,7 +218,6 @@ class AgoraCallService {
   /// Join a video call channel
   Future<bool> joinVideoCall({
     required String channelName,
-    String? token,
     int uid = 0,
   }) async {
     if (_engine == null || !_isInitialized) {
@@ -247,15 +240,13 @@ class AgoraCallService {
       // Video calls always use speakerphone by default
       await _engine!.setEnableSpeakerphone(true);
 
-      final effectiveToken = (token != null && token.isNotEmpty)
-          ? token
-          : AgoraConfig.token;
+      // Static authentication - no token required
       debugPrint(
-        '\uD83D\uDD11 AgoraCallService: Using token: ${effectiveToken.isEmpty ? "(empty)" : "${effectiveToken.substring(0, 10)}..."}',
+        '🔧 AgoraCallService: Using static authentication (no token)',
       );
 
       await _engine!.joinChannel(
-        token: effectiveToken,
+        token: '', // Empty token for static authentication
         channelId: channelName,
         uid: uid,
         options: const ChannelMediaOptions(

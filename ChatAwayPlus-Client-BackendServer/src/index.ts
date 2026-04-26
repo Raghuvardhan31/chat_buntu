@@ -52,6 +52,15 @@ const io = new SocketIOServer(httpServer, {
 io.on("connection", (socket) => {
   console.log("Client connected:", socket.id);
 
+  // User joins a room named after their userId for targeted signaling
+  socket.on("join", (userId: string) => {
+    socket.join(userId);
+    console.log(`👤 User ${userId} joined their signaling room`);
+  });
+
+  // Initialize Call Signaling Handlers
+  require("./services/call-socket.service").setupCallHandlers(io, socket);
+
   socket.on("disconnect", () => {
     console.log("Client disconnected:", socket.id);
   });

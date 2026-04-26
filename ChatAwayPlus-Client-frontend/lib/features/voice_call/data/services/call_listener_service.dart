@@ -91,7 +91,6 @@ class CallListenerService {
                   contactProfilePic: signal.callerProfilePic,
                   callType: signal.callType,
                   channelName: signal.channelName,
-                  agoraToken: signal.agoraToken,
                 ),
             transitionsBuilder:
                 (context, animation, secondaryAnimation, child) {

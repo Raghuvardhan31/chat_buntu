@@ -6,7 +6,6 @@ import Chat from "../db/models/chat.model";
 import User from "../db/models/user.model";
 import StarredMessage from "../db/models/starred-message.model";
 import { sendDataMessage, sendStoriesChangedToUser, sendChatPictureLikeToUser, sendStatusLikeToUser, sendReactionNotificationToUser, sendIncomingCallToUser } from "../services/fcm.service";
-import { generateAgoraToken } from "../services/agora.service";
 import { getById } from "../services/user.service";
 import blockController from "./block.controller";
 import { config } from "../config";
@@ -2990,12 +2989,8 @@ class ChatController {
               : "Unknown";
             const callerProfilePic = callerUser?.chat_picture || null;
 
-            // Generate Agora tokens for both caller and callee
-            console.log(`🎫 Generating Agora tokens for channel: ${channelName}`);
-            const callerAgoraToken = generateAgoraToken(channelName, 0);
-            const calleeAgoraToken = generateAgoraToken(channelName, 0);
-            console.log(`🎫 Caller token: ${callerAgoraToken.substring(0, 15)}...`);
-            console.log(`🎫 Callee token: ${calleeAgoraToken.substring(0, 15)}...`);
+            // Static authentication - no tokens needed
+            console.log(`🎫 Using static authentication for channel: ${channelName}`);
 
             // Check if callee is connected via WebSocket
             const calleeSocketId = this.connectedUsers.get(calleeId);
@@ -3009,7 +3004,6 @@ class ChatController {
                 callerProfilePic,
                 callType,
                 channelName,
-                agoraToken: calleeAgoraToken,
               });
 
               // Update call log to ringing
@@ -3018,8 +3012,8 @@ class ChatController {
                 { where: { callId } }
               ).catch((err) => console.error("Failed to update call log:", err));
 
-              // Tell caller the phone is ringing (include caller's token)
-              socket.emit("call-ringing", { callId, agoraToken: callerAgoraToken });
+              // Tell caller the phone is ringing
+              socket.emit("call-ringing", { callId });
 
               console.log(
                 `📞 Call ${callId}: ${authenticatedUserId} → ${calleeId} (${callType}) — callee online, ringing`,
@@ -3035,12 +3029,11 @@ class ChatController {
                   callerProfilePic: callerProfilePic || "",
                   callType,
                   channelName,
-                  agoraToken: calleeAgoraToken,
                 });
 
                 if (fcmResult.success) {
                   // FCM sent — tell caller to wait (callee may wake up)
-                  socket.emit("call-ringing", { callId, agoraToken: callerAgoraToken });
+                  socket.emit("call-ringing", { callId });
 
                   // Update call log to ringing
                   await CallLog.update(
@@ -3160,18 +3153,17 @@ class ChatController {
               { where: { callId } }
             ).catch((err) => console.error("Failed to update call log:", err));
 
-            // Look up channelName from call log to generate fresh Agora token
+            // Look up channelName from call log for call acceptance
             const callLog = await CallLog.findOne({ where: { callId }, attributes: ["channelName"] });
             const channelName = callLog?.channelName || callId;
             
-            console.log(`🎫 Generating fresh Agora token for caller on accept: ${channelName}`);
-            const callerAgoraToken = generateAgoraToken(channelName, 0);
+            console.log(`🎫 Call accepted for channel: ${channelName}`);
 
-            // Notify the caller that the call was accepted (include Agora token)
+            // Notify the caller that the call was accepted
             const callerSocketId = this.connectedUsers.get(callerId);
             if (callerSocketId) {
               console.log(`📡 Emitting call-accepted to caller ${callerId} (socket: ${callerSocketId})`);
-              this.io.to(callerSocketId).emit("call-accepted", { callId, agoraToken: callerAgoraToken });
+              this.io.to(callerSocketId).emit("call-accepted", { callId });
             } else {
               console.warn(`⚠️ Caller ${callerId} not found in connectedUsers during accept`);
             }

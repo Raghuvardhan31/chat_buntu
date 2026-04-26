@@ -20,17 +20,15 @@ class ActiveCallPage extends ConsumerStatefulWidget {
   final String channelName;
   final String? callId;
   final String? otherUserId;
-  final String? agoraToken;
 
   const ActiveCallPage({
     super.key,
     required this.contactName,
     this.contactProfilePic,
-    this.callType = CallType.voice,
+    required this.callType,
     required this.channelName,
     this.callId,
     this.otherUserId,
-    this.agoraToken,
   });
 
   @override
@@ -188,13 +186,10 @@ class _ActiveCallPageState extends ConsumerState<ActiveCallPage>
     };
 
 
-    // Join Agora channel with server-provided token
+    // Join Agora channel with static authentication
     debugPrint(
-      '📞 ActiveCallPage: Joining Agora channel="${widget.channelName}", hasToken=${widget.agoraToken != null}',
+      '📞 ActiveCallPage: Joining Agora channel="${widget.channelName}" (static auth)',
     );
-    if (widget.agoraToken != null && widget.agoraToken!.length > 20) {
-      debugPrint('🔑 ActiveCallPage: Token preview: ${widget.agoraToken!.substring(0, 10)}...');
-    }
 
     if (mounted) {
       setState(() => _callStatus = 'Connecting...');
@@ -202,7 +197,6 @@ class _ActiveCallPageState extends ConsumerState<ActiveCallPage>
 
     final joined = await _agoraService.joinVoiceCall(
       channelName: widget.channelName,
-      token: widget.agoraToken,
     );
 
     // Ensure speaker state is applied after join too

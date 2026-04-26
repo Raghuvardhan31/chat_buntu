@@ -17,7 +17,6 @@ class VideoCallPage extends ConsumerStatefulWidget {
   final String channelName;
   final String? callId;
   final String? otherUserId;
-  final String? agoraToken;
 
   const VideoCallPage({
     super.key,
@@ -26,7 +25,6 @@ class VideoCallPage extends ConsumerStatefulWidget {
     required this.channelName,
     this.callId,
     this.otherUserId,
-    this.agoraToken,
   });
 
   @override
@@ -159,7 +157,6 @@ class _VideoCallPageState extends ConsumerState<VideoCallPage> {
 
     final joined = await _agoraService.joinVideoCall(
       channelName: widget.channelName,
-      token: widget.agoraToken,
     );
 
     // Enable speaker by default for video calls
