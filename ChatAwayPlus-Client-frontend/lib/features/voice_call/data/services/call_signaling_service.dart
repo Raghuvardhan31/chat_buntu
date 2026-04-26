@@ -455,7 +455,8 @@ class CallSignalingService {
   /// Ensures socket is connected and authenticated before emitting.
   Future<void> initiateCall({
     required String callId,
-    required String calleeId,
+    required String callerId, // Current user ID
+    required String calleeId, // Target user ID
     required CallType callType,
     required String channelName,
   }) async {
@@ -484,11 +485,12 @@ class CallSignalingService {
     startListening();
 
     debugPrint(
-      '📞 CallSignaling: Initiating call to $calleeId (type: ${callType.name})',
+      '📞 CallSignaling: Initiating call from $callerId to $calleeId (type: ${callType.name})',
     );
 
     socket.emit(CallSocketEvents.initiateCall, {
       'callId': callId,
+      'callerId': callerId, // Include current user ID
       'calleeId': calleeId,
       'callType': callType.name,
       'channelName': channelName,
@@ -499,6 +501,7 @@ class CallSignalingService {
   Future<bool> acceptIncomingCall({
     required String callId,
     required String callerId,
+    required String calleeId, // Current user ID accepting the call
     Duration timeout = const Duration(seconds: 8),
   }) async {
     final ready = await _socketRepo.ensureSocketReady(timeout: timeout);
@@ -518,10 +521,11 @@ class CallSignalingService {
       return false;
     }
 
-    debugPrint('✅ CallSignaling: Accepting call $callId from $callerId');
+    debugPrint('✅ CallSignaling: Accepting call $callId from $callerId as $calleeId');
     socket.emit(CallSocketEvents.acceptCall, {
       'callId': callId,
       'callerId': callerId,
+      'calleeId': calleeId, // Include who is accepting
     });
     return true;
   }

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:chataway_plus/core/routes/navigation_service.dart';
+import 'package:chataway_plus/core/storage/token_storage.dart';
 import 'package:chataway_plus/features/contacts/data/datasources/contacts_database_service.dart';
 import 'package:chataway_plus/features/contacts/utils/contact_display_name_helper.dart';
 import 'package:chataway_plus/features/voice_call/data/services/call_signaling_service.dart';
@@ -65,6 +66,9 @@ class CallListenerService {
 
     _isShowingIncomingCall = true;
 
+    // Get current user ID (callee)
+    final currentUserId = await TokenSecureStorage.instance.getCurrentUserIdUUID() ?? '';
+
     // Resolve device contact name (prefer phone contact name over app name)
     String displayName = signal.callerName;
     try {
@@ -85,6 +89,7 @@ class CallListenerService {
             opaque: true,
             pageBuilder: (context, animation, secondaryAnimation) =>
                 IncomingCallPage(
+                  currentUserId: currentUserId, // Current user ID (callee)
                   callId: signal.callId,
                   callerId: signal.callerId,
                   contactName: displayName,

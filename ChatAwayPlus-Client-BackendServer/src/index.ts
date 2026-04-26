@@ -176,20 +176,23 @@ async function startServer() {
     // Connect to database
     await sequelize.authenticate();
     console.log("Database connection established successfully.");
-
     await sequelize.sync({ alter: false });
+    console.log("Database models synchronized.");
+  } catch (error) {
+    console.error("❌ Database connection failed:", error);
+    console.warn("⚠️ Server will continue to run without database functionality.");
+  }
 
+  try {
     // Start HTTP server with Socket.IO and Express
     const PORT = Number(process.env.PORT) || 3200;
     httpServer.listen(PORT, "0.0.0.0", () => {
       console.log(`Server is running in ${config.env} mode on port ${PORT}`);
       console.log("WebSocket server is running on 0.0.0.0");
     });
-    console.log("Database models synchronized.");
   } catch (error) {
-    console.error("Error:", error);
-    // Instead of process.exit, we could implement a proper shutdown procedure
-    throw error;
+    console.error("Failed to start HTTP server:", error);
+    process.exit(1);
   }
 }
 

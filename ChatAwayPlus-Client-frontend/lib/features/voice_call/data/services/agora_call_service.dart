@@ -131,7 +131,10 @@ class AgoraCallService {
                 onConnectionStateChanged?.call(state, reason);
               },
           onError: (ErrorCodeType err, String msg) {
-            debugPrint('❌ AgoraCallService: Error ${err.name}: $msg');
+            debugPrint('❌ AgoraCallService: ENGINE ERROR ${err.name} ($err): $msg');
+            if (err == ErrorCodeType.errTokenExpired || err == ErrorCodeType.errInvalidToken) {
+              debugPrint('⚠️ AgoraCallService: TOKEN ERROR detected! Check if App Certificate is enabled in Agora Console.');
+            }
             onCallError?.call('Agora Error: ${err.name} - $msg');
           },
           onAudioRoutingChanged: (int routing) {
@@ -165,12 +168,13 @@ class AgoraCallService {
   }
 
   /// Join a voice call channel
-  /// [channelName] — unique channel ID (e.g., conversation ID between two users)
-  /// [uid] — local user ID (0 = auto-assign)
+  /// [channelName] — unique channel ID (deterministic: CHAT_<smallerId>_<largerId>)
+  /// [uid] — backend user ID (required, must be the actual user ID from backend)
   Future<bool> joinVoiceCall({
     required String channelName,
-    int uid = 0,
+    required int uid, // Backend user ID - NOT timestamp generated
   }) async {
+    debugPrint('🔧 AgoraCallService: Joining voice channel with backend user ID: $uid');
     if (_engine == null || !_isInitialized) {
       debugPrint('❌ AgoraCallService: Engine not initialized');
       return false;
@@ -183,19 +187,19 @@ class AgoraCallService {
 
     try {
       debugPrint(
-        '📞 AgoraCallService: Joining voice channel "$channelName"...',
+        '📞 AgoraCallService: Joining voice channel "$channelName" as UID $uid...',
       );
+
+      if (channelName.isEmpty) {
+        debugPrint('❌ AgoraCallService: CANNOT JOIN - channelName is empty!');
+        return false;
+      }
 
       // Disable video for voice-only call
       await _engine!.disableVideo();
 
       // Ensure speaker is off by default for voice calls (earpiece)
       await _engine!.setEnableSpeakerphone(false);
-
-      // Static authentication - no token required
-      debugPrint(
-        '🔧 AgoraCallService: Using static authentication (no token)',
-      );
 
       await _engine!.joinChannel(
         token: '', // Empty token for static authentication
@@ -208,18 +212,23 @@ class AgoraCallService {
         ),
       );
 
+      debugPrint('✅ AgoraCallService: joinChannel command sent successfully');
       return true;
     } catch (e) {
-      debugPrint('❌ AgoraCallService: Join channel failed: $e');
+      debugPrint('❌ AgoraCallService: Join channel exception: $e');
       return false;
     }
   }
 
   /// Join a video call channel
+  /// [channelName] — unique channel ID (deterministic: CHAT_<smallerId>_<largerId>)
+  /// [uid] — backend user ID (required, must be the actual user ID from backend)
   Future<bool> joinVideoCall({
     required String channelName,
-    int uid = 0,
+    required int uid, // Backend user ID - NOT timestamp generated
   }) async {
+    debugPrint('🔧 AgoraCallService: Joining video channel with backend user ID: $uid');
+
     if (_engine == null || !_isInitialized) {
       debugPrint('❌ AgoraCallService: Engine not initialized');
       return false;
@@ -232,18 +241,19 @@ class AgoraCallService {
 
     try {
       debugPrint(
-        '📹 AgoraCallService: Joining video channel "$channelName"...',
+        '📹 AgoraCallService: Joining video channel "$channelName" with UID $uid...',
       );
 
+      if (channelName.isEmpty) {
+        debugPrint('❌ AgoraCallService: CANNOT JOIN - channelName is empty!');
+        return false;
+      }
+
       await _engine!.enableVideo();
+      await _engine!.startPreview();
       
       // Video calls always use speakerphone by default
       await _engine!.setEnableSpeakerphone(true);
-
-      // Static authentication - no token required
-      debugPrint(
-        '🔧 AgoraCallService: Using static authentication (no token)',
-      );
 
       await _engine!.joinChannel(
         token: '', // Empty token for static authentication
@@ -258,9 +268,10 @@ class AgoraCallService {
         ),
       );
 
+      debugPrint('✅ AgoraCallService: joinVideoChannel command sent successfully');
       return true;
     } catch (e) {
-      debugPrint('❌ AgoraCallService: Join video channel failed: $e');
+      debugPrint('❌ AgoraCallService: Join video channel exception: $e');
       return false;
     }
   }

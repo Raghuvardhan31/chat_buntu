@@ -15,8 +15,9 @@ import 'package:chataway_plus/features/voice_call/presentation/pages/video_call_
 /// Shown when a call is received — displays caller info with accept/reject buttons
 /// Inspired by WhatsApp / iOS incoming call design
 class IncomingCallPage extends ConsumerStatefulWidget {
+  final String currentUserId; // Current user ID (callee)
   final String callId;
-  final String callerId;
+  final String callerId; // Who is calling
   final String contactName;
   final String? contactProfilePic;
   final CallType callType;
@@ -24,6 +25,7 @@ class IncomingCallPage extends ConsumerStatefulWidget {
 
   const IncomingCallPage({
     super.key,
+    required this.currentUserId,
     required this.callId,
     required this.callerId,
     required this.contactName,
@@ -312,6 +314,7 @@ class _IncomingCallPageState extends ConsumerState<IncomingCallPage>
     final ok = await CallSignalingService.instance.acceptIncomingCall(
       callId: widget.callId,
       callerId: widget.callerId,
+      calleeId: widget.currentUserId, // Current user ID accepting the call
     );
     if (!ok) {
       debugPrint(
@@ -334,19 +337,21 @@ class _IncomingCallPageState extends ConsumerState<IncomingCallPage>
 
     final Widget callPage = widget.callType == CallType.video
         ? VideoCallPage(
+            currentUserId: widget.currentUserId, // Current user ID (callee)
             contactName: widget.contactName,
             contactProfilePic: widget.contactProfilePic,
             channelName: widget.channelName,
             callId: widget.callId,
-            otherUserId: widget.callerId,
+            otherUserId: widget.callerId, // Caller ID
           )
         : ActiveCallPage(
+            currentUserId: widget.currentUserId, // Current user ID (callee)
             contactName: widget.contactName,
             contactProfilePic: widget.contactProfilePic,
             callType: widget.callType,
             channelName: widget.channelName,
             callId: widget.callId,
-            otherUserId: widget.callerId,
+            otherUserId: widget.callerId, // Caller ID
           );
 
     if (!mounted) return;

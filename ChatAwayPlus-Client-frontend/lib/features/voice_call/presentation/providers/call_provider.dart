@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:chataway_plus/core/storage/token_storage.dart';
 import 'package:chataway_plus/features/voice_call/data/models/call_model.dart';
 import 'package:chataway_plus/features/voice_call/data/services/call_signaling_service.dart';
 import 'package:chataway_plus/features/voice_call/data/datasources/call_history_local_datasource.dart';
@@ -121,8 +122,12 @@ class CallNotifier extends ChangeNotifier {
 
     // 🚀 NEW: Actually tell the server to start the call!
     try {
+      // Get current user ID for callerId
+      final currentUserId = await TokenSecureStorage.instance.getCurrentUserIdUUID() ?? '';
+      
       await CallSignalingService.instance.initiateCall(
         callId: effectiveCallId,
+        callerId: currentUserId, // Current user ID as caller
         calleeId: contactId,
         callType: callType,
         channelName: channelName,

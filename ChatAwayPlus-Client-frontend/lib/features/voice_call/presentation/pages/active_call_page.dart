@@ -9,26 +9,29 @@ import 'package:chataway_plus/features/voice_call/data/services/call_signaling_s
 import 'package:chataway_plus/features/voice_call/presentation/providers/call_provider.dart';
 import 'package:chataway_plus/features/voice_call/presentation/widgets/call_avatar.dart';
 import 'package:chataway_plus/features/voice_call/presentation/widgets/call_action_button.dart';
+import 'package:chataway_plus/features/voice_call/data/config/agora_config.dart';
 
 /// Active/Ongoing voice call page with real Agora RTC integration
 /// Shows call timer, contact info, and action buttons (mute, speaker, end)
 /// Modern dark gradient design inspired by WhatsApp & iOS call screens
 class ActiveCallPage extends ConsumerStatefulWidget {
+  final String currentUserId; // Current user ID
   final String contactName;
   final String? contactProfilePic;
   final CallType callType;
   final String channelName;
-  final String? callId;
-  final String? otherUserId;
+  final String callId;
+  final String otherUserId; // Remote user ID
 
   const ActiveCallPage({
     super.key,
+    required this.currentUserId,
     required this.contactName,
     this.contactProfilePic,
     required this.callType,
     required this.channelName,
-    this.callId,
-    this.otherUserId,
+    required this.callId,
+    required this.otherUserId,
   });
 
   @override
@@ -195,8 +198,13 @@ class _ActiveCallPageState extends ConsumerState<ActiveCallPage>
       setState(() => _callStatus = 'Connecting...');
     }
 
+    // Convert current user ID to int for Agora UID
+    final currentUserId = AgoraConfig.uuidToUint32(widget.currentUserId);
+    debugPrint('📞 ActiveCallPage: Using mapped UID for Agora: $currentUserId from UUID: ${widget.currentUserId}');
+
     final joined = await _agoraService.joinVoiceCall(
       channelName: widget.channelName,
+      uid: currentUserId, // Use backend user ID as Agora UID
     );
 
     // Ensure speaker state is applied after join too

@@ -351,7 +351,8 @@ class _OneToOneChatPageState extends ConsumerState<OneToOneChatPage>
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => OutgoingCallPage(
-          contactId: widget.receiverId,
+          currentUserId: widget.currentUserId, // Current user ID
+          contactId: widget.receiverId, // Target user ID
           contactName: widget.contactName,
           callType: type,
           channelName: channelName,

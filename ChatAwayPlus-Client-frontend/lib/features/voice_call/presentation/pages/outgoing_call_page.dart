@@ -5,6 +5,7 @@ import 'package:chataway_plus/core/responsive_layout/responsive_layout_builder.d
 import 'package:chataway_plus/core/connectivity/connectivity_service.dart';
 import 'package:chataway_plus/features/voice_call/data/models/call_model.dart';
 import 'package:chataway_plus/features/voice_call/data/services/call_signaling_service.dart';
+import 'package:chataway_plus/features/voice_call/data/config/agora_config.dart';
 import 'package:chataway_plus/features/voice_call/presentation/providers/call_provider.dart';
 import 'package:chataway_plus/features/voice_call/presentation/widgets/call_avatar.dart';
 import 'package:chataway_plus/features/voice_call/presentation/widgets/call_action_button.dart';
@@ -15,7 +16,8 @@ import 'package:chataway_plus/features/voice_call/presentation/pages/video_call_
 /// WhatsApp-style: Shows "Calling..." → "Ringing..." → transitions to ActiveCallPage
 /// Handles: offline, unavailable, rejected, timeout (45s), and accepted scenarios
 class OutgoingCallPage extends ConsumerStatefulWidget {
-  final String contactId;
+  final String currentUserId; // Current user ID
+  final String contactId; // Target user ID
   final String contactName;
   final String? contactProfilePic;
   final CallType callType;
@@ -24,6 +26,7 @@ class OutgoingCallPage extends ConsumerStatefulWidget {
 
   const OutgoingCallPage({
     super.key,
+    required this.currentUserId,
     required this.contactId,
     required this.contactName,
     this.contactProfilePic,
@@ -150,10 +153,11 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
       }
     });
 
-    // Send call signal to server
+    // Send call signal to server with proper user IDs
     _signaling.initiateCall(
       callId: widget.callId,
-      calleeId: widget.contactId,
+      callerId: widget.currentUserId, // Current user ID
+      calleeId: widget.contactId, // Target user ID
       callType: widget.callType,
       channelName: widget.channelName,
     );
@@ -184,6 +188,7 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
     // Transition to active call page (voice or video)
     final Widget callPage = widget.callType == CallType.video
         ? VideoCallPage(
+            currentUserId: widget.currentUserId, // Current user ID
             contactName: widget.contactName,
             contactProfilePic: widget.contactProfilePic,
             channelName: widget.channelName,
@@ -191,6 +196,7 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
             otherUserId: widget.contactId,
           )
         : ActiveCallPage(
+            currentUserId: widget.currentUserId, // Current user ID
             contactName: widget.contactName,
             contactProfilePic: widget.contactProfilePic,
             callType: widget.callType,

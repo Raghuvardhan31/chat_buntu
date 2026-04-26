@@ -7,24 +7,27 @@ import 'package:chataway_plus/features/voice_call/data/services/agora_call_servi
 import 'package:chataway_plus/features/voice_call/data/services/call_signaling_service.dart';
 import 'package:chataway_plus/features/voice_call/presentation/providers/call_provider.dart';
 import 'package:chataway_plus/features/voice_call/presentation/widgets/call_avatar.dart';
+import 'package:chataway_plus/features/voice_call/data/config/agora_config.dart';
 
 /// Full-screen video call page with real Agora RTC integration
 /// Shows local preview (small PiP), remote video (full screen),
 /// and action buttons (mute, speaker, camera switch, video toggle, end)
 class VideoCallPage extends ConsumerStatefulWidget {
+  final String currentUserId; // Current user ID
   final String contactName;
   final String? contactProfilePic;
   final String channelName;
-  final String? callId;
-  final String? otherUserId;
+  final String callId;
+  final String otherUserId; // Remote user ID
 
   const VideoCallPage({
     super.key,
+    required this.currentUserId,
     required this.contactName,
     this.contactProfilePic,
     required this.channelName,
-    this.callId,
-    this.otherUserId,
+    required this.callId,
+    required this.otherUserId,
   });
 
   @override
@@ -98,6 +101,7 @@ class _VideoCallPageState extends ConsumerState<VideoCallPage> {
     };
 
     _agoraService.onRemoteUserJoined = (int uid) {
+      debugPrint('📹 VideoCallPage: Remote user joined with UID: $uid');
       if (mounted) {
         setState(() {
           _remoteUid = uid;
@@ -106,6 +110,7 @@ class _VideoCallPageState extends ConsumerState<VideoCallPage> {
           _callStatus = 'Connected';
         });
         _startTimer();
+        debugPrint('📹 VideoCallPage: State updated - Remote video should now be visible');
       }
     };
 
@@ -155,8 +160,13 @@ class _VideoCallPageState extends ConsumerState<VideoCallPage> {
       setState(() => _callStatus = 'Connecting...');
     }
 
+    // Convert current user ID to int for Agora UID
+    final currentUserId = AgoraConfig.uuidToUint32(widget.currentUserId);
+    debugPrint('📹 VideoCallPage: Using mapped UID for Agora: $currentUserId from UUID: ${widget.currentUserId}');
+
     final joined = await _agoraService.joinVideoCall(
       channelName: widget.channelName,
+      uid: currentUserId, // Use backend user ID as Agora UID
     );
 
     // Enable speaker by default for video calls
@@ -269,12 +279,14 @@ class _VideoCallPageState extends ConsumerState<VideoCallPage> {
 
   Widget _buildRemoteVideo(ResponsiveSize responsive) {
     if (_remoteUid != null && _agoraService.engine != null) {
+      debugPrint('📹 VideoCallPage: Building remote video for UID: $_remoteUid');
       return SizedBox.expand(
         child: AgoraVideoView(
           controller: VideoViewController.remote(
             rtcEngine: _agoraService.engine!,
             canvas: VideoCanvas(uid: _remoteUid!),
             connection: RtcConnection(channelId: widget.channelName),
+            useFlutterTexture: false, // Use SurfaceView for better compatibility
           ),
         ),
       );
@@ -325,6 +337,7 @@ class _VideoCallPageState extends ConsumerState<VideoCallPage> {
               controller: VideoViewController(
                 rtcEngine: _agoraService.engine!,
                 canvas: const VideoCanvas(uid: 0),
+                useFlutterTexture: false, // Use SurfaceView
               ),
             ),
           ),

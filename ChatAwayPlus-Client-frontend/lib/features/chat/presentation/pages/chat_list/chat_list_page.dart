@@ -599,6 +599,7 @@ class _ChatListPageState extends ConsumerState<ChatListPage>
                           await Navigator.of(context, rootNavigator: true).push(
                             MaterialPageRoute(
                               builder: (_) => OutgoingCallPage(
+                                currentUserId: _currentUserId ?? '',
                                 contactId: contactId,
                                 contactName: name,
                                 callType: CallType.voice,

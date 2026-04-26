@@ -5,6 +5,7 @@ import 'package:chataway_plus/core/themes/colors/app_colors.dart';
 import 'package:chataway_plus/core/themes/app_text_styles.dart';
 import 'package:chataway_plus/core/connectivity/connectivity_service.dart';
 import 'package:chataway_plus/core/snackbar/app_snackbar.dart';
+import 'package:chataway_plus/core/storage/token_storage.dart';
 import 'package:chataway_plus/features/contacts/presentation/providers/contacts_management.dart';
 import 'package:chataway_plus/features/contacts/data/models/contact_local.dart';
 import 'package:chataway_plus/features/shared/widgets/avatars/cached_circle_avatar.dart';
@@ -174,14 +175,14 @@ class CallingHubPage extends ConsumerWidget {
     );
   }
 
-  void _initiateCall({
+  Future<void> _initiateCall({
     required BuildContext context,
     required WidgetRef ref,
     required String contactId,
     required String contactName,
     String? contactProfilePic,
     CallType callType = CallType.voice,
-  }) {
+  }) async {
     if (!ConnectivityCache.instance.isOnline) {
       AppSnackbar.showOfflineWarning(
         context,
@@ -203,10 +204,13 @@ class CallingHubPage extends ConsumerWidget {
           callType: callType,
         );
 
+    final currentUserId = await TokenSecureStorage.instance.getCurrentUserIdUUID() ?? '';
+
     Navigator.of(context).push(
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) =>
             OutgoingCallPage(
+              currentUserId: currentUserId,
               contactId: contactId,
               contactName: contactName,
               contactProfilePic: contactProfilePic,
