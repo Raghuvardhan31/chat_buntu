@@ -1,0 +1,101 @@
+# Flutter/Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+coverage/
+lib/generated_plugin_registrant.dart
+
+# Flutter/Dart IDEs
+.vscode/
+.idea/
+*.iml
+*.ipr
+*.iws
+.dartignore
+
+# Flutter pub
+.pub-cache/
+.pub/
+pubspec.lock
+
+# Android
+android/.gradle/
+android/captures/
+android/gradlew
+android/gradlew.bat
+android/local.properties
+android/key.properties
+
+# iOS
+ios/.symlinks/
+ios/Flutter/flutter_export_environment.sh
+ios/Flutter/Generated.xcconfig
+ios/Runner.xcworkspace/
+ios/Runner.xcodeproj/project.xcworkspace/
+ios/Runner.xcodeproj/xcshareddata/
+ios/Pods/
+ios/Podfile.lock
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+
+# Web
+web/build/
+
+# Logs and temp files
+*.log
+*.tmp
+*.temp
+crashlytics-build-events
+hs_err_pid*.log
+replay_pid*.log
+lib.zip
+analyze_*.txt
+
+# OS generated
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDEs
+.idea/
+.vscode/settings.json
+.vscode/tasks.json
+.vscode/launch.json
+.vscode/*.code-snippets
+
+# Dependencies
+.fvmrc
+**/pubspec.lock
+
+# Backend subfolder (already has own .gitignore)
+ChatAwayPlus-Client-BackendServer/node_modules/
+ChatAwayPlus-Client-BackendServer/dist/
+ChatAwayPlus-Client-BackendServer/*.log
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Certificates
+*.pem
+*.key
+*.cert
+upload_certificate.pem
+
+# Archives
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# OS
+__MACOSX/
