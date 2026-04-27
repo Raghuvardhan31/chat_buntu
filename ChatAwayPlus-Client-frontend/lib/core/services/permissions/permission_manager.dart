@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:permission_handler/permission_handler.dart' as ph;
+import 'package:permission_handler/permission_handler.dart' show PermissionStatus, Permission, openAppSettings;
 import 'contacts_permission_service.dart';
 import 'photos_permission_service.dart';
 
@@ -286,7 +287,7 @@ class PermissionManager {
           TextButton(
             onPressed: () async {
               Navigator.pop(context, true);
-              await openAppSettings();
+              await ph.openAppSettings();
             },
             child: Text('Open Settings'),
           ),
@@ -346,7 +347,7 @@ class PermissionManager {
 
   /// Open app settings
   Future<bool> openAppSettings() async {
-    return await openAppSettings();
+    return await ph.openAppSettings();
   }
 
   /// Check if permission should show rationale (Android)

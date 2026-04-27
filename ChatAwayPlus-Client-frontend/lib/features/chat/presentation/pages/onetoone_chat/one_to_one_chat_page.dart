@@ -129,6 +129,7 @@ class _OneToOneChatPageState extends ConsumerState<OneToOneChatPage>
 
   // NEW: Prevent double taps / concurrent sends
   bool _isSending = false;
+  bool _isInitiatingCall = false;
 
   double _snackbarBottomPosition() {
     final width = context.screenWidth;
@@ -294,77 +295,119 @@ class _OneToOneChatPageState extends ConsumerState<OneToOneChatPage>
   }
 
   Future<void> _handleCall(CallType type) async {
-    // 1. Permission checks
-    final List<AppPermissionType> permissions = [AppPermissionType.microphone];
-    if (type == CallType.video) {
-      permissions.add(AppPermissionType.camera);
+    if (_isInitiatingCall) {
+      debugPrint('📞 [_handleCall] Already initiating a call, ignoring.');
+      return;
     }
 
-    bool allGranted = true;
-    for (final p in permissions) {
-      final granted = await PermissionManager.instance.ensurePermissionGranted(
-        p,
-        context: context,
+    setState(() => _isInitiatingCall = true);
+
+    try {
+      debugPrint(
+        '📞 [_handleCall] Initiating ${type.name} call to ${widget.receiverId}',
       );
-      if (!granted) {
-        allGranted = false;
-        break;
+      // 1. Permission checks
+      final List<AppPermissionType> permissions = [
+        AppPermissionType.microphone,
+      ];
+      if (type == CallType.video) {
+        permissions.add(AppPermissionType.camera);
       }
-    }
 
-    if (!allGranted) {
-      if (mounted) {
+      bool allGranted = true;
+      for (final p in permissions) {
+        debugPrint('📞 [_handleCall] Checking permission: ${p.name}');
+        final granted = await PermissionManager.instance
+            .ensurePermissionGranted(p, context: context);
+        if (!granted) {
+          debugPrint('📞 [_handleCall] Permission ${p.name} denied');
+          allGranted = false;
+          break;
+        }
+      }
+
+      if (!allGranted) {
+        if (mounted) {
+          AppSnackbar.showError(
+            context,
+            'Permissions required to start a call',
+            bottomPosition: _snackbarBottomPosition(),
+          );
+        }
+        return;
+      }
+
+      if (!mounted) return;
+
+      // 2. Connectivity check
+      debugPrint('📞 [_handleCall] Checking connectivity...');
+      if (!_unifiedChatService.isConnectedToServer) {
+        debugPrint('📞 [_handleCall] Socket not connected');
+        AppSnackbar.showOfflineWarning(
+          context,
+          "You're offline. Check your connection",
+        );
+        return;
+      }
+
+      // 3. Check if blocked
+      debugPrint('📞 [_handleCall] Checking if blocked...');
+      if (_isBlocked) {
+        debugPrint('📞 [_handleCall] Contact is blocked');
         AppSnackbar.showError(
           context,
-          'Permissions required to start a call',
+          'Cannot call a blocked contact',
           bottomPosition: _snackbarBottomPosition(),
         );
+        return;
       }
-      return;
-    }
 
-    if (!mounted) return;
-
-    // 2. Connectivity check
-    if (!_unifiedChatService.isConnectedToServer) {
-      AppSnackbar.showOfflineWarning(
-        context,
-        "You're offline. Check your connection",
+      // 4. Generate IDs
+      final String callId = const Uuid().v4();
+      final String channelName = AgoraConfig.generateOneToOneChannelName(
+        widget.currentUserId,
+        widget.receiverId,
       );
-      return;
-    }
-
-    // 3. Check if blocked
-    if (_isBlocked) {
-      AppSnackbar.showError(
-        context,
-        'Cannot call a blocked contact',
-        bottomPosition: _snackbarBottomPosition(),
+      debugPrint(
+        '📞 [_handleCall] IDs generated: callId=$callId, channel=$channelName',
       );
-      return;
+
+      // 5. Navigate to OutgoingCallPage
+      if (mounted) {
+        debugPrint('📞 [_handleCall] Navigating to OutgoingCallPage...');
+        final completer = Completer<void>();
+        // Use post frame callback to ensure we are not in the middle of a build
+        // which can happen if the keyboard dismissal triggered a layout change.
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
+          if (mounted) {
+            try {
+              await Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => OutgoingCallPage(
+                    currentUserId: widget.currentUserId,
+                    contactId: widget.receiverId,
+                    contactName: widget.contactName,
+                    callType: type,
+                    channelName: channelName,
+                    callId: callId,
+                  ),
+                ),
+              );
+            } catch (e) {
+              debugPrint('❌ [_handleCall] Navigator push error: $e');
+            }
+          }
+          completer.complete();
+        });
+        await completer.future;
+      }
+    } catch (e) {
+      debugPrint('❌ [_handleCall] Error initiating call: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isInitiatingCall = false);
+      }
     }
-
-    // 4. Generate IDs
-    final String callId = const Uuid().v4();
-    final String channelName = AgoraConfig.generateOneToOneChannelName(
-      widget.currentUserId,
-      widget.receiverId,
-    );
-
-    // 5. Navigate to OutgoingCallPage
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => OutgoingCallPage(
-          currentUserId: widget.currentUserId,
-          contactId: widget.receiverId,
-          contactName: widget.contactName,
-          callType: type,
-          channelName: channelName,
-          callId: callId,
-        ),
-      ),
-    );
-
   }
 
   // TODO: Happy Update feature - temporarily hidden
@@ -1126,11 +1169,15 @@ class _OneToOneChatPageState extends ConsumerState<OneToOneChatPage>
         onNavigateBack: _loadBlockedStatus,
         onFollowUpSelected: _handleFollowUpSelected,
         onVoiceCall: () async {
+          if (_isInitiatingCall) return;
+          debugPrint('📞 [onVoiceCall] callback triggered in OneToOneChatPage');
           _messageFocusNode.unfocus();
           await Future.delayed(const Duration(milliseconds: 150));
           _handleCall(CallType.voice);
         },
         onVideoCall: () async {
+          if (_isInitiatingCall) return;
+          debugPrint('📹 [onVideoCall] callback triggered in OneToOneChatPage');
           _messageFocusNode.unfocus();
           await Future.delayed(const Duration(milliseconds: 150));
           _handleCall(CallType.video);

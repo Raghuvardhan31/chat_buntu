@@ -23,6 +23,9 @@ import '../../features/voice_call/presentation/pages/calling_hub_page.dart';
 import '../../features/voice_call/presentation/pages/meeting_page.dart';
 import 'package:chataway_plus/features/app_gate/presentation/app_gate_page.dart';
 
+import '../../features/voice_call/presentation/pages/join_call_page.dart';
+import '../../features/voice_call/data/models/call_model.dart';
+
 /// =============================================================================
 /// APP ROUTER - CHATAWAY+ FLUTTER APPLICATION
 /// =============================================================================
@@ -93,7 +96,7 @@ class AppRouter {
       case RouteNames.aboutUs:
         return _buildRoute(const AboutUsPage(), settings);
       case RouteNames.voiceHub:
-        return _buildRoute(const VoiceHubPage(), settings);
+        return _buildRoute(const CallingHubPage(), settings);
       case RouteNames.callingHub:
         return _buildRoute(const CallingHubPage(), settings);
 
@@ -126,6 +129,24 @@ class AppRouter {
           ),
           settings,
         );
+
+      case RouteNames.joinCall:
+        final args = settings.arguments as Map<String, dynamic>?;
+        if (args == null) return _errorRoute('Missing join call arguments');
+
+        return _buildRoute(
+          JoinCallPage(
+            currentUserId: args['currentUserId'] as String,
+            callId: args['callId'] as String,
+            contactId: args['contactId'] as String,
+            contactName: args['contactName'] as String,
+            contactProfilePic: args['contactProfilePic'] as String?,
+            callType: args['callType'] as CallType,
+            channelName: args['channelName'] as String,
+          ),
+          settings,
+        );
+
       case RouteNames.oneToOneChat:
         // Extract contact info from arguments
         final args = settings.arguments as Map<String, dynamic>?;

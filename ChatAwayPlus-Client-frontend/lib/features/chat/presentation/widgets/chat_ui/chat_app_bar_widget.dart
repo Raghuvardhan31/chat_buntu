@@ -274,15 +274,21 @@ class ChatAppBarWidget extends ConsumerWidget implements PreferredSizeWidget {
                         size: responsive.size(24),
                       ),
                       onPressed: onVideoCall,
+                      tooltip: 'Video Call',
+                      padding: EdgeInsets.all(responsive.spacing(8)),
+                      splashRadius: responsive.size(24),
                     ),
                   if (onVoiceCall != null)
                     IconButton(
                       icon: Icon(
                         Icons.call_rounded,
                         color: isDark ? Colors.white : Colors.black,
-                        size: responsive.size(22),
+                        size: responsive.size(24),
                       ),
                       onPressed: onVoiceCall,
+                      tooltip: 'Voice Call',
+                      padding: EdgeInsets.all(responsive.spacing(8)),
+                      splashRadius: responsive.size(24),
                     ),
                   SizedBox(width: responsive.spacing(4)),
                 ]),

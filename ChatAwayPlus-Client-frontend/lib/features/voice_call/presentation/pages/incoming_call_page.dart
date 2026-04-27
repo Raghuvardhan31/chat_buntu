@@ -10,6 +10,7 @@ import 'package:chataway_plus/features/voice_call/presentation/widgets/call_avat
 import 'package:chataway_plus/features/voice_call/presentation/widgets/call_action_button.dart';
 import 'package:chataway_plus/features/voice_call/presentation/pages/active_call_page.dart';
 import 'package:chataway_plus/features/voice_call/presentation/pages/video_call_page.dart';
+import 'package:chataway_plus/core/routes/route_names.dart';
 
 /// Full-screen incoming call page
 /// Shown when a call is received — displays caller info with accept/reject buttons
@@ -46,8 +47,8 @@ class _IncomingCallPageState extends ConsumerState<IncomingCallPage>
   StreamSubscription? _callEndedSub;
   bool _handled = false;
 
-  /// Auto-reject after 45 seconds (WhatsApp-style missed call)
-  static const Duration _autoRejectTimeout = Duration(seconds: 45);
+  /// Auto-reject after 30 seconds (Requirement: 30s timeout)
+  static const Duration _autoRejectTimeout = Duration(seconds: 30);
 
   @override
   void initState() {
@@ -191,7 +192,7 @@ class _IncomingCallPageState extends ConsumerState<IncomingCallPage>
                             fontWeight: FontWeight.w400,
                           ),
                         ),
-                        const Spacer(),
+                        SizedBox(height: responsive.spacing(40)),
                         // Action buttons row
                         _buildActionButtons(responsive),
                         SizedBox(height: responsive.spacing(20)),
@@ -344,34 +345,19 @@ class _IncomingCallPageState extends ConsumerState<IncomingCallPage>
 
     ref.read(callProvider).acceptCall();
 
-    final Widget callPage = widget.callType == CallType.video
-        ? VideoCallPage(
-            currentUserId: widget.currentUserId, // Current user ID (callee)
-            contactName: widget.contactName,
-            contactProfilePic: widget.contactProfilePic,
-            channelName: widget.channelName,
-            callId: widget.callId,
-            otherUserId: widget.callerId, // Caller ID
-          )
-        : ActiveCallPage(
-            currentUserId: widget.currentUserId, // Current user ID (callee)
-            contactName: widget.contactName,
-            contactProfilePic: widget.contactProfilePic,
-            callType: widget.callType,
-            channelName: widget.channelName,
-            callId: widget.callId,
-            otherUserId: widget.callerId, // Caller ID
-          );
-
     if (!mounted) return;
-    Navigator.of(context).pushReplacement(
-      PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) => callPage,
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(opacity: animation, child: child);
-        },
-        transitionDuration: const Duration(milliseconds: 300),
-      ),
+    
+    Navigator.of(context).pushReplacementNamed(
+      RouteNames.joinCall,
+      arguments: {
+        'currentUserId': widget.currentUserId,
+        'callId': widget.callId,
+        'contactId': widget.callerId,
+        'contactName': widget.contactName,
+        'contactProfilePic': widget.contactProfilePic,
+        'callType': widget.callType,
+        'channelName': widget.channelName,
+      },
     );
   }
 

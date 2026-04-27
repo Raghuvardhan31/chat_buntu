@@ -122,6 +122,9 @@ class RouteNames {
   /// Profile page (to be added later)
   static const String profile = '/profile';
 
+  /// Join call transition page
+  static const String joinCall = '/join-call';
+
   // ================================================
   // Helper Methods
   // ================================================
@@ -150,6 +153,7 @@ class RouteNames {
     notificationTest,
     draggableTest,
     meeting,
+    joinCall,
     createPoll,
     contactPicker,
     contacts,

@@ -201,13 +201,17 @@ class AgoraCallService {
 
       // Disable video for voice-only call
       await _engine!.disableVideo();
-
       // Ensure speaker is off by default for voice calls (earpiece)
       try {
         await _engine!.setEnableSpeakerphone(false);
       } catch (e) {
         debugPrint('⚠️ AgoraCallService: Initial setEnableSpeakerphone failed: $e');
       }
+      
+      // Ensure audio is enabled and video is disabled for voice calls
+      await _engine!.enableAudio();
+      await _engine!.muteLocalVideoStream(true);
+      await _engine!.muteAllRemoteVideoStreams(true);
 
       await _engine!.joinChannel(
         token: '', // Empty token for static authentication
@@ -215,7 +219,9 @@ class AgoraCallService {
         uid: uid,
         options: const ChannelMediaOptions(
           autoSubscribeAudio: true,
+          autoSubscribeVideo: false,
           publishMicrophoneTrack: true,
+          publishCameraTrack: false,
           clientRoleType: ClientRoleType.clientRoleBroadcaster,
         ),
       );

@@ -176,7 +176,7 @@ async function startServer() {
     // Connect to database
     await sequelize.authenticate();
     console.log("Database connection established successfully.");
-    await sequelize.sync({ alter: false });
+    await sequelize.sync({ alter: true });
     console.log("Database models synchronized.");
   } catch (error) {
     console.error("❌ Database connection failed:", error);

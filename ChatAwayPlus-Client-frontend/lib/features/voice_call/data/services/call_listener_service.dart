@@ -27,6 +27,13 @@ class CallListenerService {
     // Ensure signaling service is listening for socket events
     CallSignalingService.instance.startListening();
 
+    // Ensure user is in their signaling room
+    TokenSecureStorage.instance.getCurrentUserIdUUID().then((userId) {
+      if (userId != null) {
+        CallSignalingService.instance.joinSignalingRoom(userId);
+      }
+    });
+
     _incomingCallSub = CallSignalingService.instance.incomingCallStream.listen((
       signal,
     ) {
@@ -83,30 +90,36 @@ class CallListenerService {
       debugPrint('⚠️ CallListener: Failed to resolve contact name: $e');
     }
 
-    navigator
-        .push(
-          PageRouteBuilder(
-            opaque: true,
-            pageBuilder: (context, animation, secondaryAnimation) =>
-                IncomingCallPage(
-                  currentUserId: currentUserId, // Current user ID (callee)
-                  callId: signal.callId,
-                  callerId: signal.callerId,
-                  contactName: displayName,
-                  contactProfilePic: signal.callerProfilePic,
-                  callType: signal.callType,
-                  channelName: signal.channelName,
-                ),
-            transitionsBuilder:
-                (context, animation, secondaryAnimation, child) {
-                  return FadeTransition(opacity: animation, child: child);
-                },
-            transitionDuration: const Duration(milliseconds: 300),
-          ),
-        )
-        .then((_) {
-          _isShowingIncomingCall = false;
-        });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (navigator.mounted) {
+        navigator
+            .push(
+              PageRouteBuilder(
+                opaque: true,
+                pageBuilder: (context, animation, secondaryAnimation) =>
+                    IncomingCallPage(
+                      currentUserId: currentUserId, // Current user ID (callee)
+                      callId: signal.callId,
+                      callerId: signal.callerId,
+                      contactName: displayName,
+                      contactProfilePic: signal.callerProfilePic,
+                      callType: signal.callType,
+                      channelName: signal.channelName,
+                    ),
+                transitionsBuilder:
+                    (context, animation, secondaryAnimation, child) {
+                      return FadeTransition(opacity: animation, child: child);
+                    },
+                transitionDuration: const Duration(milliseconds: 300),
+              ),
+            )
+            .then((_) {
+              _isShowingIncomingCall = false;
+            });
+      } else {
+        _isShowingIncomingCall = false;
+      }
+    });
   }
 
   /// Handle incoming call from FCM push notification

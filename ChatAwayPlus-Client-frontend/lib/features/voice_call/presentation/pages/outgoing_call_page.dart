@@ -59,8 +59,8 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
   StreamSubscription? _errorSub;
   StreamSubscription? _missedSub;
 
-  /// Ring timeout — WhatsApp uses ~45 seconds
-  static const Duration _ringTimeout = Duration(seconds: 45);
+  /// Ring timeout — 30 seconds (Requirement)
+  static const Duration _ringTimeout = Duration(seconds: 30);
 
   @override
   void initState() {
@@ -108,7 +108,7 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
     _acceptSub = _signaling.callAcceptedStream.listen((data) {
       final callId = data['callId'] ?? '';
       debugPrint(
-        '📞 OutgoingCall: call-accepted received: callId=$callId, widgetCallId=${widget.callId}',
+        '📞 OutgoingCall: call:accepted received: callId=$callId, widgetCallId=${widget.callId}',
       );
       if (callId == widget.callId && mounted) {
         debugPrint(
@@ -162,7 +162,7 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
       channelName: widget.channelName,
     );
 
-    // Start ring timeout (45 seconds)
+    // Start ring timeout (30 seconds)
     _ringTimeoutTimer = Timer(_ringTimeout, () {
       if (!_isEnded && mounted) {
         debugPrint(
@@ -205,15 +205,19 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
             otherUserId: widget.contactId,
           );
 
-    Navigator.of(context).pushReplacement(
-      PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) => callPage,
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(opacity: animation, child: child);
-        },
-        transitionDuration: const Duration(milliseconds: 300),
-      ),
-    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) => callPage,
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+            transitionDuration: const Duration(milliseconds: 300),
+          ),
+        );
+      }
+    });
   }
 
   void _scheduleAutoClose(CallStatus status) {
@@ -322,7 +326,7 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
                           SizedBox(height: responsive.spacing(12)),
                           // Call status
                           _buildCallStatus(responsive),
-                          const Spacer(),
+                          SizedBox(height: responsive.spacing(40)),
                           // Action buttons
                           _buildActionButtons(responsive),
                           SizedBox(height: responsive.spacing(30)),

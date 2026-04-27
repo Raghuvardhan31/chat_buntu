@@ -8,21 +8,21 @@ class CallSocketEvents {
   CallSocketEvents._();
 
   // Client → Server (emit)
-  static const String initiateCall = 'call-initiate';
-  static const String acceptCall = 'call-accept';
-  static const String rejectCall = 'call-reject';
-  static const String endCall = 'call-end';
-  static const String callBusy = 'call-busy';
+  static const String initiateCall = 'call:initiate';
+  static const String acceptCall = 'call:accept';
+  static const String rejectCall = 'call:reject';
+  static const String endCall = 'call:end';
+  static const String callBusy = 'call:busy';
 
   // Server → Client (listen)
-  static const String incomingCall = 'incoming-call';
-  static const String callAccepted = 'call-accepted';
-  static const String callRejected = 'call-rejected';
-  static const String callEnded = 'call-ended';
-  static const String callUnavailable = 'call-unavailable';
-  static const String callRinging = 'call-ringing';
-  static const String callError = 'call-error';
-  static const String callMissed = 'call-missed';
+  static const String incomingCall = 'call:incoming';
+  static const String callAccepted = 'call:accepted';
+  static const String callRejected = 'call:rejected';
+  static const String callEnded = 'call:ended';
+  static const String callUnavailable = 'call:unavailable';
+  static const String callRinging = 'call:ringing';
+  static const String callError = 'call:error';
+  static const String callMissed = 'call:missed';
 
   // Call history & statistics (emit → listen)
   static const String getCallHistory = 'get-call-history';
@@ -498,6 +498,14 @@ class CallSignalingService {
       'callType': callType.name,
       'channelName': channelName,
     });
+  }
+
+  /// Join the signaling room with user ID (Required for receiving calls)
+  void joinSignalingRoom(String userId) {
+    final socket = _socketRepo.connectionManager.socket;
+    if (socket == null || !_socketRepo.isConnected) return;
+    debugPrint('👤 CallSignaling: Joining signaling room for user $userId');
+    socket.emit('join', userId);
   }
 
   /// Accept an incoming call

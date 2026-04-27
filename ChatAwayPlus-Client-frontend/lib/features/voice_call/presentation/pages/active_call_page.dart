@@ -47,7 +47,7 @@ class _ActiveCallPageState extends ConsumerState<ActiveCallPage>
   int _elapsedSeconds = 0;
   bool _isConnected = false;
   bool _isMuted = false;
-  bool _isSpeakerOn = false;
+  bool _isSpeakerOn = true; // Speaker on by default for better visibility in tests
   bool _isConnecting = true;
   String _callStatus = 'Connecting...';
   StreamSubscription? _callEndedSub;
@@ -356,7 +356,7 @@ class _ActiveCallPageState extends ConsumerState<ActiveCallPage>
                                   )
                                 : _buildConnectingStatus(responsive),
                           ),
-                          const Spacer(),
+                          SizedBox(height: responsive.spacing(40)),
                           // Audio wave visualization (decorative)
                           if (_isConnected) _buildAudioWave(responsive),
                           if (_isConnected)
