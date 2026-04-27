@@ -1,5 +1,5 @@
 import { Server, Socket } from "socket.io";
-import { generateAgoraToken } from "./agora.service";
+import { getAgoraAppId } from "./agora.service";
 
 // Track active calls to store channel names and other metadata
 const activeCalls = new Map<string, {
@@ -13,17 +13,24 @@ export const setupCallHandlers = (io: Server, socket: Socket) => {
   // Handle call initiation (Caller -> Server)
   socket.on("call-initiate", async (data: { 
     callId: string;
+    callerId: string;
     calleeId: string; 
     callType: "voice" | "video";
     channelName: string;
   }) => {
-    const { callId, calleeId, callType, channelName } = data;
+    const { callId, callerId, calleeId, callType, channelName } = data;
     
-    console.log(`📞 [CALL-INIT] From: ${socket.id} to: ${calleeId}, channel: ${channelName}`);
+    console.log(`📞 [call-initiate] From: ${callerId} to: ${calleeId}, type: ${callType}, channel: ${channelName}, callId: ${callId}`);
+
+    if (!callerId || !calleeId || !channelName || !callId) {
+      console.log(`❌ [call-initiate] Invalid call data received`);
+      socket.emit("call-error", { message: "Invalid call data" });
+      return;
+    }
 
     // Store call metadata
     activeCalls.set(callId, {
-      callerId: socket.id,
+      callerId,
       calleeId,
       channelName,
       callType
@@ -32,73 +39,69 @@ export const setupCallHandlers = (io: Server, socket: Socket) => {
     // Check if callee is online (joined their room)
     const calleeRoom = io.sockets.adapter.rooms.get(calleeId);
     if (!calleeRoom || calleeRoom.size === 0) {
-      console.log(`📵 [CALL] Callee ${calleeId} is offline`);
+      console.log(`📵 [call-initiate] Callee ${calleeId} is offline/unavailable`);
       socket.emit("call-unavailable", { callId });
       activeCalls.delete(callId);
       return;
     }
 
-    // Generate Agora tokens for both parties
-    const callerToken = generateAgoraToken(channelName, 0);
-    const calleeToken = generateAgoraToken(channelName, 0);
-
-    // Tell caller it's ringing (include their token)
+    // Tell caller it's ringing
     socket.emit("call-ringing", { 
       callId, 
-      agoraToken: callerToken 
+      channelName,
+      appId: getAgoraAppId()
     });
+    console.log(`📡 [call-ringing] Emitted to caller: ${callerId}`);
 
-    // Send incoming-call signal to callee (include their token)
-    socket.to(calleeId).emit("call-incoming", {
+    // Send incoming-call signal to callee
+    socket.to(calleeId).emit("incoming-call", {
       callId,
-      callerId: socket.id,
-      callerName: "Friend", // In production, fetch from DB
+      callerId,
+      callerName: data["callerName"] || "Someone", 
       callType,
       channelName,
-      agoraToken: calleeToken
+      appId: getAgoraAppId()
     });
-
-    console.log(`📡 [CALL-RINGING] Sent to caller ${socket.id}`);
-    console.log(`📡 [CALL-INCOMING] Sent to callee ${calleeId}`);
+    console.log(`📡 [incoming-call] Emitted to callee: ${calleeId}`);
   });
 
   // Handle call acceptance (Callee -> Server)
-  socket.on("call-accept", (data: { callId: string; callerId: string }) => {
-    const { callId, callerId } = data;
-    console.log(`✅ [CALL-ACCEPT] Call ${callId} accepted by callee`);
+  socket.on("call-accept", (data: { callId: string; callerId: string; calleeId: string }) => {
+    const { callId, callerId, calleeId } = data;
+    console.log(`✅ [call-accept] Call ${callId} accepted by ${calleeId}`);
     
     const callMetadata = activeCalls.get(callId);
-    let callerToken = "";
     
-    if (callMetadata) {
-      // Regenerate token to ensure it's fresh for the caller
-      callerToken = generateAgoraToken(callMetadata.channelName, 0);
-    }
-    
+    // Notify caller that call was accepted
     socket.to(callerId).emit("call-accepted", {
       callId: callId,
-      agoraToken: callerToken
+      channelName: callMetadata?.channelName || "",
     });
+    console.log(`📡 [call-accepted] Emitted to caller: ${callerId}`);
   });
 
   // Handle call rejection
   socket.on("call-reject", (data: { callId: string; callerId: string }) => {
-    console.log(`❌ [CALL-REJECT] Call ${data.callId} rejected`);
-    activeCalls.delete(data.callId);
-    socket.to(data.callerId).emit("call-rejected", { callId: data.callId });
+    const { callId, callerId } = data;
+    console.log(`❌ [call-reject] Call ${callId} rejected by callee`);
+    activeCalls.delete(callId);
+    socket.to(callerId).emit("call-rejected", { callId });
+    console.log(`📡 [call-rejected] Emitted to caller: ${callerId}`);
   });
 
   // Handle end call
   socket.on("call-end", (data: { callId: string; otherUserId: string }) => {
-    console.log(`🔚 [CALL-END] Call ${data.callId} ended`);
-    activeCalls.delete(data.callId);
+    const { callId, otherUserId } = data;
+    console.log(`🔚 [call-end] Call ${callId} ended. Notifying ${otherUserId}`);
+    activeCalls.delete(callId);
     
-    // The other party could be identified by socket.id or by their userId room
-    socket.to(data.otherUserId).emit("call-ended", { callId: data.callId });
+    socket.to(otherUserId).emit("call-ended", { callId });
+    console.log(`📡 [call-ended] Emitted to: ${otherUserId}`);
   });
 
-  // Handle socket disconnect - clean up active calls if needed
+  // Handle socket disconnect
   socket.on("disconnect", () => {
-    // In a real app, you'd iterate and end calls where this socket was a participant
+    // Basic cleanup logic could go here
   });
 };
+

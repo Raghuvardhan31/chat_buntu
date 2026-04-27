@@ -29,6 +29,7 @@ import 'package:chataway_plus/core/database/tables/chat/follow_ups_table.dart';
 import 'package:chataway_plus/features/chat/presentation/pages/forward_message/forward_message_page.dart';
 import 'package:chataway_plus/features/voice_call/presentation/pages/outgoing_call_page.dart';
 import 'package:chataway_plus/features/voice_call/data/models/call_model.dart';
+import 'package:chataway_plus/features/voice_call/data/config/agora_config.dart';
 import 'package:chataway_plus/features/chat/presentation/pages/onetoone_chat/mixins/media_attachment_mixin.dart';
 import 'package:chataway_plus/features/location_sharing/presentation/pages/location_picker_page.dart';
 import 'package:chataway_plus/features/location_sharing/data/models/location_model.dart';
@@ -345,14 +346,17 @@ class _OneToOneChatPageState extends ConsumerState<OneToOneChatPage>
 
     // 4. Generate IDs
     final String callId = const Uuid().v4();
-    final String channelName = callId; // Agora channel name
+    final String channelName = AgoraConfig.generateOneToOneChannelName(
+      widget.currentUserId,
+      widget.receiverId,
+    );
 
     // 5. Navigate to OutgoingCallPage
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => OutgoingCallPage(
-          currentUserId: widget.currentUserId, // Current user ID
-          contactId: widget.receiverId, // Target user ID
+          currentUserId: widget.currentUserId,
+          contactId: widget.receiverId,
           contactName: widget.contactName,
           callType: type,
           channelName: channelName,
@@ -360,6 +364,7 @@ class _OneToOneChatPageState extends ConsumerState<OneToOneChatPage>
         ),
       ),
     );
+
   }
 
   // TODO: Happy Update feature - temporarily hidden

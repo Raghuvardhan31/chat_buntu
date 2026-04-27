@@ -15,7 +15,7 @@ class CallSocketEvents {
   static const String callBusy = 'call-busy';
 
   // Server → Client (listen)
-  static const String incomingCall = 'call-incoming';
+  static const String incomingCall = 'incoming-call';
   static const String callAccepted = 'call-accepted';
   static const String callRejected = 'call-rejected';
   static const String callEnded = 'call-ended';
@@ -309,7 +309,10 @@ class CallSignalingService {
       debugPrint(
         '✅ CallSignaling: Accepted callId=$callId',
       );
-      _callAcceptedController.add({'callId': callId});
+      _callAcceptedController.add({
+        'callId': callId,
+        'channelName': (data is Map ? data['channelName'] : null)?.toString(),
+      });
     });
 
     // Callee rejected our call

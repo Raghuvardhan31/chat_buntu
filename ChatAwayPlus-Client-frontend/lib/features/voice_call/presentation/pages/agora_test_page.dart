@@ -116,7 +116,12 @@ class _AgoraTestPageState extends State<AgoraTestPage> {
 
     setState(() => _status = '📞 Joining channel "$channel"...');
 
-    final joined = await _agoraService.joinVoiceCall(channelName: channel);
+    // Use a test UID for agora test page
+    final testUid = 12345; // Test user ID
+    final joined = await _agoraService.joinVoiceCall(
+          channelName: channel,
+          uid: 0,
+        );
     if (!joined) {
       setState(() => _status = '❌ Failed to join channel');
     }
