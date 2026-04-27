@@ -155,7 +155,11 @@ class AgoraCallService {
       await _engine!.enableAudio();
 
       // Default to earpiece for voice, but video calls will override this
-      await _engine!.setDefaultAudioRouteToSpeakerphone(false);
+      try {
+        await _engine!.setDefaultAudioRouteToSpeakerphone(false);
+      } catch (e) {
+        debugPrint('⚠️ AgoraCallService: setDefaultAudioRouteToSpeakerphone failed: $e');
+      }
 
       _isInitialized = true;
       debugPrint('✅ AgoraCallService: Engine initialized successfully');
@@ -199,7 +203,11 @@ class AgoraCallService {
       await _engine!.disableVideo();
 
       // Ensure speaker is off by default for voice calls (earpiece)
-      await _engine!.setEnableSpeakerphone(false);
+      try {
+        await _engine!.setEnableSpeakerphone(false);
+      } catch (e) {
+        debugPrint('⚠️ AgoraCallService: Initial setEnableSpeakerphone failed: $e');
+      }
 
       await _engine!.joinChannel(
         token: '', // Empty token for static authentication
@@ -253,7 +261,11 @@ class AgoraCallService {
       await _engine!.startPreview();
       
       // Video calls always use speakerphone by default
-      await _engine!.setEnableSpeakerphone(true);
+      try {
+        await _engine!.setEnableSpeakerphone(true);
+      } catch (e) {
+        debugPrint('⚠️ AgoraCallService: Initial setEnableSpeakerphone (video) failed: $e');
+      }
 
       await _engine!.joinChannel(
         token: '', // Empty token for static authentication
@@ -296,15 +308,25 @@ class AgoraCallService {
   /// Toggle microphone mute
   Future<void> setMicMuted(bool muted) async {
     if (_engine == null) return;
-    await _engine!.muteLocalAudioStream(muted);
-    debugPrint('🎤 AgoraCallService: Mic ${muted ? "muted" : "unmuted"}');
+    try {
+      await _engine!.muteLocalAudioStream(muted);
+      debugPrint('🎤 AgoraCallService: Mic ${muted ? "muted" : "unmuted"}');
+    } catch (e) {
+      debugPrint('❌ AgoraCallService: Failed to set mic muted ($muted): $e');
+    }
   }
 
   /// Toggle speaker phone
   Future<void> setSpeakerOn(bool speakerOn) async {
     if (_engine == null) return;
-    await _engine!.setEnableSpeakerphone(speakerOn);
-    debugPrint('🔊 AgoraCallService: Speaker ${speakerOn ? "on" : "off"}');
+    try {
+      await _engine!.setEnableSpeakerphone(speakerOn);
+      debugPrint('🔊 AgoraCallService: Speaker ${speakerOn ? "on" : "off"}');
+    } catch (e) {
+      debugPrint('❌ AgoraCallService: Failed to set speaker phone ($speakerOn): $e');
+      // On some devices/states, this fails with -3 (ERR_NOT_READY) 
+      // if called too early. We catch it to prevent crashing the flow.
+    }
   }
 
   /// Set explicit audio route (e.g., Bluetooth, Earpiece)

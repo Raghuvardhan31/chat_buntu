@@ -3,9 +3,9 @@ class ApiUrls {
   // BASE URLs (DEVELOPMENT - Mobile Testing)
   // ========================================
 
-  static const String apiBaseUrl = 'http://192.168.31.165:3200/api';
-  static const String mediaBaseUrl = 'http://192.168.31.165:3200';
-  static const String chatWebSocketUrl = 'ws://192.168.31.165:3200';
+  static const String apiBaseUrl = 'http://192.168.1.2:3200/api';
+  static const String mediaBaseUrl = 'http://192.168.1.2:3200';
+  static const String chatWebSocketUrl = 'ws://192.168.1.2:3200';
 
   // // ========================================
   // // BASE URLs (PRODUCTION)

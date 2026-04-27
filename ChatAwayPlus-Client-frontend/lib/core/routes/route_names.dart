@@ -101,6 +101,9 @@ class RouteNames {
   // Draggable Test Page - For testing draggable emoji/ball feature
   static const String draggableTest = '/draggable-test';
 
+  /// Meeting page - Group video call
+  static const String meeting = '/meeting';
+
   /// Poll creation page
   static const String createPoll = '/create-poll';
 
@@ -146,6 +149,7 @@ class RouteNames {
     enhancedOneToOneChat,
     notificationTest,
     draggableTest,
+    meeting,
     createPoll,
     contactPicker,
     contacts,

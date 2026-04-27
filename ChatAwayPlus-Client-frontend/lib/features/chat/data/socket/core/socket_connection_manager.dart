@@ -202,7 +202,7 @@ class SocketConnectionManager {
       createdSocket.connect();
 
       int waitTime = 0;
-      const maxWaitTime = 5000;
+      const maxWaitTime = 20000;
       const checkInterval = 200;
 
       while (!_isConnected &&

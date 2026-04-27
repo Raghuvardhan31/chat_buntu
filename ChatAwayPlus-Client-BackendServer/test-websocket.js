@@ -2,7 +2,7 @@ const io = require('socket.io-client');
 const readline = require('readline');
 
 // Configuration
-const SERVER_URL = 'http://192.168.31.165:3200'; // Update with your server URL
+const SERVER_URL = 'http://192.168.1.2:3200'; // Update with your server URL
 const TEST_USER_1 = 'd363a719-2522-4a8b-a299-201f82ea52dc';
 const TEST_USER_2 = 'a4f81491-7e28-4632-b9a8-d250905459bb';
 

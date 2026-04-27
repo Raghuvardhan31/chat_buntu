@@ -268,6 +268,7 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
             if (!didPop) _cancelCall();
           },
           child: Scaffold(
+            resizeToAvoidBottomInset: false,
             body: Container(
               width: double.infinity,
               height: double.infinity,
@@ -283,57 +284,65 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
                 ),
               ),
               child: SafeArea(
-                child: FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: Column(
-                    children: [
-                      SizedBox(height: responsive.spacing(16)),
-                      // Top bar
-                      _buildTopBar(responsive),
-                      SizedBox(height: responsive.spacing(60)),
-                      // Encrypted label
-                      _buildEncryptedLabel(responsive),
-                      SizedBox(height: responsive.spacing(40)),
-                      // Avatar with ripple animation
-                      CallAvatar(
-                        name: widget.contactName,
-                        profilePicUrl: widget.contactProfilePic,
-                        size: 120,
-                        showRipple: !_isEnded,
-                      ),
-                      SizedBox(height: responsive.spacing(30)),
-                      // Contact name
-                      Text(
-                        widget.contactName,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: responsive.size(28),
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                      SizedBox(height: responsive.spacing(12)),
-                      // Call status
-                      _buildCallStatus(responsive),
-                      const Spacer(),
-                      // Action buttons
-                      _buildActionButtons(responsive),
-                      SizedBox(height: responsive.spacing(30)),
-                      // End call button
-                      if (!_isEnded) ...[
-                        EndCallButton(onTap: _cancelCall),
-                        SizedBox(height: responsive.spacing(12)),
-                        Text(
-                          'Cancel',
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.6),
-                            fontSize: responsive.size(13),
-                            fontWeight: FontWeight.w500,
+                child: SingleChildScrollView(
+                  physics: const ClampingScrollPhysics(),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight - MediaQuery.of(context).padding.top - MediaQuery.of(context).padding.bottom,
+                    ),
+                    child: FadeTransition(
+                      opacity: _fadeAnimation,
+                      child: Column(
+                        children: [
+                          SizedBox(height: responsive.spacing(16)),
+                          // Top bar
+                          _buildTopBar(responsive),
+                          SizedBox(height: responsive.spacing(60)),
+                          // Encrypted label
+                          _buildEncryptedLabel(responsive),
+                          SizedBox(height: responsive.spacing(40)),
+                          // Avatar with ripple animation
+                          CallAvatar(
+                            name: widget.contactName,
+                            profilePicUrl: widget.contactProfilePic,
+                            size: 120,
+                            showRipple: !_isEnded,
                           ),
-                        ),
-                      ],
-                      SizedBox(height: responsive.spacing(40)),
-                    ],
+                          SizedBox(height: responsive.spacing(30)),
+                          // Contact name
+                          Text(
+                            widget.contactName,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: responsive.size(28),
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          SizedBox(height: responsive.spacing(12)),
+                          // Call status
+                          _buildCallStatus(responsive),
+                          const Spacer(),
+                          // Action buttons
+                          _buildActionButtons(responsive),
+                          SizedBox(height: responsive.spacing(30)),
+                          // End call button
+                          if (!_isEnded) ...[
+                            EndCallButton(onTap: _cancelCall),
+                            SizedBox(height: responsive.spacing(12)),
+                            Text(
+                              'Cancel',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.6),
+                                fontSize: responsive.size(13),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                          SizedBox(height: responsive.spacing(40)),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),

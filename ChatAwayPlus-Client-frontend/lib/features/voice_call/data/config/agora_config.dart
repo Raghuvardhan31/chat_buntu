@@ -35,7 +35,9 @@ class AgoraConfig {
   /// Format: GROUP_<chatRoomId>
   static String generateGroupChannelName(String chatRoomId) {
     final channelName = 'GROUP_$chatRoomId';
-    debugPrint('🔧 AgoraConfig: Generated group channel: $channelName for room $chatRoomId');
+    debugPrint(
+      '🔧 AgoraConfig: Generated group channel: $channelName for room $chatRoomId',
+    );
     return channelName;
   }
 }

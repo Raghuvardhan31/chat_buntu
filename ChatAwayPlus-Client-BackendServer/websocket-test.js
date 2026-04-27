@@ -1,7 +1,7 @@
 const WebSocket = require('ws');
 const readline = require('readline');
 
-const WS_URL = 'ws://192.168.31.165:3200';
+const WS_URL = 'ws://192.168.1.2:3200';
 const TOKEN = 'YOUR_TEST_TOKEN'; // Replace with a valid JWT token
 
 // Create readline interface for user input

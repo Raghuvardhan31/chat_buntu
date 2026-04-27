@@ -20,6 +20,7 @@ import '../../features/contacts/presentation/pages/contacts_hub_page.dart';
 import '../../features/chat/presentation/pages/onetoone_chat/one_to_one_chat_page.dart';
 import '../../features/navigation/presentation/pages/main_navigation_page.dart';
 import '../../features/voice_call/presentation/pages/calling_hub_page.dart';
+import '../../features/voice_call/presentation/pages/meeting_page.dart';
 import 'package:chataway_plus/features/app_gate/presentation/app_gate_page.dart';
 
 /// =============================================================================
@@ -110,6 +111,21 @@ class AppRouter {
         return _buildRoute(const PollHubPage(), settings);
       case RouteNames.contactPicker:
         return _buildRoute(const ContactPickerPage(), settings);
+      case RouteNames.meeting:
+        final args = settings.arguments as Map<String, dynamic>?;
+        if (args == null ||
+            !args.containsKey('meetingId') ||
+            !args.containsKey('currentUserId')) {
+          return _errorRoute('Missing meeting information');
+        }
+        return _buildRoute(
+          MeetingPage(
+            meetingId: args['meetingId'] as String,
+            currentUserId: args['currentUserId'] as String,
+            initialMeetingTitle: args['initialMeetingTitle'] as String?,
+          ),
+          settings,
+        );
       case RouteNames.oneToOneChat:
         // Extract contact info from arguments
         final args = settings.arguments as Map<String, dynamic>?;

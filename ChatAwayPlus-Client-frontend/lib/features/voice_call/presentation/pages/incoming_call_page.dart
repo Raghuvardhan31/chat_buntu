@@ -131,6 +131,7 @@ class _IncomingCallPageState extends ConsumerState<IncomingCallPage>
         );
 
         return Scaffold(
+          resizeToAvoidBottomInset: false,
           body: Container(
             width: double.infinity,
             height: double.infinity,
@@ -146,52 +147,60 @@ class _IncomingCallPageState extends ConsumerState<IncomingCallPage>
               ),
             ),
             child: SafeArea(
-              child: FadeTransition(
-                opacity: _fadeAnimation,
-                child: Column(
-                  children: [
-                    SizedBox(height: responsive.spacing(60)),
-                    // Encrypted label
-                    _buildEncryptedLabel(responsive),
-                    SizedBox(height: responsive.spacing(40)),
-                    // Avatar with ripple
-                    CallAvatar(
-                      name: widget.contactName,
-                      profilePicUrl: widget.contactProfilePic,
-                      size: 120,
-                      showRipple: true,
+              child: SingleChildScrollView(
+                physics: const ClampingScrollPhysics(),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: constraints.maxHeight - MediaQuery.of(context).padding.top - MediaQuery.of(context).padding.bottom,
+                  ),
+                  child: FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: Column(
+                      children: [
+                        SizedBox(height: responsive.spacing(60)),
+                        // Encrypted label
+                        _buildEncryptedLabel(responsive),
+                        SizedBox(height: responsive.spacing(40)),
+                        // Avatar with ripple
+                        CallAvatar(
+                          name: widget.contactName,
+                          profilePicUrl: widget.contactProfilePic,
+                          size: 120,
+                          showRipple: true,
+                        ),
+                        SizedBox(height: responsive.spacing(30)),
+                        // Contact name
+                        Text(
+                          widget.contactName,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: responsive.size(28),
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        SizedBox(height: responsive.spacing(10)),
+                        // Call type label
+                        Text(
+                          widget.callType == CallType.video
+                              ? 'Incoming Video Call...'
+                              : 'Incoming Voice Call...',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.6),
+                            fontSize: responsive.size(16),
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                        const Spacer(),
+                        // Action buttons row
+                        _buildActionButtons(responsive),
+                        SizedBox(height: responsive.spacing(20)),
+                        // Swipe hint
+                        _buildSwipeHint(responsive),
+                        SizedBox(height: responsive.spacing(40)),
+                      ],
                     ),
-                    SizedBox(height: responsive.spacing(30)),
-                    // Contact name
-                    Text(
-                      widget.contactName,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: responsive.size(28),
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    SizedBox(height: responsive.spacing(10)),
-                    // Call type label
-                    Text(
-                      widget.callType == CallType.video
-                          ? 'Incoming Video Call...'
-                          : 'Incoming Voice Call...',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.6),
-                        fontSize: responsive.size(16),
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                    const Spacer(),
-                    // Action buttons row
-                    _buildActionButtons(responsive),
-                    SizedBox(height: responsive.spacing(20)),
-                    // Swipe hint
-                    _buildSwipeHint(responsive),
-                    SizedBox(height: responsive.spacing(40)),
-                  ],
+                  ),
                 ),
               ),
             ),

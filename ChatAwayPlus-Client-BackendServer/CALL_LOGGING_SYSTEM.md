@@ -411,7 +411,7 @@ socket.on("call-statistics-error", (error) => {
 
 ```javascript
 // Initialize Socket.IO connection
-const socket = io("http://192.168.31.165:3200", {
+const socket = io("http://192.168.1.2:3200", {
   auth: {
     token: "your-jwt-token",
   },

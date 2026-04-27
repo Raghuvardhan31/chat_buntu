@@ -142,7 +142,7 @@ class WebSocketChatRepository {
   // ═══════════════════════════════════════════════════════════════════════════
 
   Future<bool> ensureSocketReady({
-    Duration timeout = const Duration(seconds: 5),
+    Duration timeout = const Duration(seconds: 20),
   }) async {
     debugPrint('🔄 ensureSocketReady: checking...');
     debugPrint('   • isConnected: ${_socketConnectionManager.isConnected}');

@@ -288,6 +288,7 @@ class _ActiveCallPageState extends ConsumerState<ActiveCallPage>
             _handleBackPress();
           },
           child: Scaffold(
+            resizeToAvoidBottomInset: false,
             body: Container(
               width: double.infinity,
               height: double.infinity,
@@ -304,63 +305,71 @@ class _ActiveCallPageState extends ConsumerState<ActiveCallPage>
                 ),
               ),
               child: SafeArea(
-                child: FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: Column(
-                    children: [
-                      SizedBox(height: responsive.spacing(16)),
-                      // Top bar with back button and encryption label
-                      _buildTopBar(responsive),
-                      SizedBox(height: responsive.spacing(50)),
-                      // Avatar
-                      CallAvatar(
-                        name: widget.contactName,
-                        profilePicUrl: widget.contactProfilePic,
-                        size: 110,
-                        showRipple: !_isConnected,
+                child: SingleChildScrollView(
+                  physics: const ClampingScrollPhysics(),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight - MediaQuery.of(context).padding.top - MediaQuery.of(context).padding.bottom,
+                    ),
+                    child: FadeTransition(
+                      opacity: _fadeAnimation,
+                      child: Column(
+                        children: [
+                          SizedBox(height: responsive.spacing(16)),
+                          // Top bar with back button and encryption label
+                          _buildTopBar(responsive),
+                          SizedBox(height: responsive.spacing(50)),
+                          // Avatar
+                          CallAvatar(
+                            name: widget.contactName,
+                            profilePicUrl: widget.contactProfilePic,
+                            size: 110,
+                            showRipple: !_isConnected,
+                          ),
+                          SizedBox(height: responsive.spacing(28)),
+                          // Contact name
+                          Text(
+                            widget.contactName,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: responsive.size(26),
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                          SizedBox(height: responsive.spacing(8)),
+                          // Status / Timer
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 300),
+                            child: _isConnected
+                                ? Text(
+                                    _formattedTime,
+                                    key: ValueKey(_formattedTime),
+                                    style: TextStyle(
+                                      color: const Color(0xFF22C55E),
+                                      fontSize: responsive.size(18),
+                                      fontWeight: FontWeight.w600,
+                                      fontFeatures: const [
+                                        FontFeature.tabularFigures(),
+                                      ],
+                                    ),
+                                  )
+                                : _buildConnectingStatus(responsive),
+                          ),
+                          const Spacer(),
+                          // Audio wave visualization (decorative)
+                          if (_isConnected) _buildAudioWave(responsive),
+                          if (_isConnected)
+                            SizedBox(height: responsive.spacing(40)),
+                          // Action buttons
+                          _buildActionButtons(responsive),
+                          SizedBox(height: responsive.spacing(30)),
+                          // End call button
+                          EndCallButton(onTap: () => _endCall()),
+                          SizedBox(height: responsive.spacing(40)),
+                        ],
                       ),
-                      SizedBox(height: responsive.spacing(28)),
-                      // Contact name
-                      Text(
-                        widget.contactName,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: responsive.size(26),
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.3,
-                        ),
-                      ),
-                      SizedBox(height: responsive.spacing(8)),
-                      // Status / Timer
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 300),
-                        child: _isConnected
-                            ? Text(
-                                _formattedTime,
-                                key: ValueKey(_formattedTime),
-                                style: TextStyle(
-                                  color: const Color(0xFF22C55E),
-                                  fontSize: responsive.size(18),
-                                  fontWeight: FontWeight.w600,
-                                  fontFeatures: const [
-                                    FontFeature.tabularFigures(),
-                                  ],
-                                ),
-                              )
-                            : _buildConnectingStatus(responsive),
-                      ),
-                      const Spacer(),
-                      // Audio wave visualization (decorative)
-                      if (_isConnected) _buildAudioWave(responsive),
-                      if (_isConnected)
-                        SizedBox(height: responsive.spacing(40)),
-                      // Action buttons
-                      _buildActionButtons(responsive),
-                      SizedBox(height: responsive.spacing(30)),
-                      // End call button
-                      EndCallButton(onTap: () => _endCall()),
-                      SizedBox(height: responsive.spacing(40)),
-                    ],
+                    ),
                   ),
                 ),
               ),
