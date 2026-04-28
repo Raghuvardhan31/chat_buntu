@@ -6,6 +6,7 @@ import 'package:chataway_plus/core/connectivity/connectivity_service.dart';
 import 'package:chataway_plus/features/voice_call/data/models/call_model.dart';
 import 'package:chataway_plus/features/voice_call/data/services/call_signaling_service.dart';
 import 'package:chataway_plus/features/voice_call/data/config/agora_config.dart';
+import 'package:chataway_plus/features/voice_call/data/services/agora_call_service.dart';
 import 'package:chataway_plus/features/voice_call/presentation/providers/call_provider.dart';
 import 'package:chataway_plus/features/voice_call/presentation/widgets/call_avatar.dart';
 import 'package:chataway_plus/features/voice_call/presentation/widgets/call_action_button.dart';
@@ -42,6 +43,8 @@ class OutgoingCallPage extends ConsumerStatefulWidget {
 class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
     with SingleTickerProviderStateMixin {
   final _signaling = CallSignalingService.instance;
+  final _agoraService = AgoraCallService.instance;
+  bool _callAccepted = false;
 
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
@@ -86,7 +89,11 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
       return;
     }
 
-    // Register outgoing call in provider so history tracking uses the same callId
+    // Register outgoing call in provider — this ALSO sends the call:initiate
+    // signal to the server via CallSignalingService. Do NOT call
+    // _signaling.initiateCall separately or the signal fires twice with
+    // different channelNames, causing caller/callee to join different
+    // Agora channels ("Connection failed" on both screens).
     ref
         .read(callProvider)
         .initiateCall(
@@ -153,14 +160,12 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
       }
     });
 
-    // Send call signal to server with proper user IDs
-    _signaling.initiateCall(
-      callId: widget.callId,
-      callerId: widget.currentUserId, // Current user ID
-      calleeId: widget.contactId, // Target user ID
-      callType: widget.callType,
-      channelName: widget.channelName,
-    );
+    // NOTE: Do NOT call _signaling.initiateCall here — callProvider.initiateCall
+    // already sent the signal above. Calling it again would send a duplicate
+    // with widget.channelName which may differ from the provider's channelName.
+
+    // Pre-join Agora channel so caller is already connected when callee accepts
+    _preJoinAgoraChannel();
 
     // Start ring timeout (30 seconds)
     _ringTimeoutTimer = Timer(_ringTimeout, () {
@@ -178,20 +183,65 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
     });
   }
 
+  /// Pre-join the Agora channel immediately so the caller is already
+  /// present when the callee accepts and joins.
+  /// IMPORTANT: We use `chan_<callId>` as the Agora channel — this MUST match
+  /// the channelName that callProvider.initiateCall sent to the server,
+  /// because the server forwards it to the callee. If they differ, the caller
+  /// and callee end up in different Agora channels → "Connection failed".
+  Future<void> _preJoinAgoraChannel() async {
+    final granted = await _agoraService.requestPermissions(
+      video: widget.callType == CallType.video,
+    );
+    if (!granted || !mounted || _isEnded) return;
+
+    final initialized = await _agoraService.initialize();
+    if (!initialized || !mounted || _isEnded) return;
+
+    // Use the same channelName the provider sent to the server: chan_<callId>
+    final agoraChannelName = 'chan_${widget.callId}';
+    final uid = AgoraConfig.uuidToUint32(widget.currentUserId);
+    debugPrint(
+      '📞 OutgoingCall: Pre-joining Agora channel="$agoraChannelName" as UID=$uid',
+    );
+
+    bool joined;
+    if (widget.callType == CallType.video) {
+      joined = await _agoraService.joinVideoCall(
+        channelName: agoraChannelName,
+        uid: uid,
+      );
+    } else {
+      joined = await _agoraService.joinVoiceCall(
+        channelName: agoraChannelName,
+        uid: uid,
+      );
+    }
+
+    if (joined && mounted) {
+      debugPrint('✅ OutgoingCall: Caller pre-joined Agora channel successfully');
+    } else if (mounted) {
+      debugPrint('❌ OutgoingCall: Failed to pre-join Agora channel');
+    }
+  }
+
   void _onCallAccepted() {
     _ringTimeoutTimer?.cancel();
     _isEnded = true;
+    _callAccepted = true;
 
     // Mark call active for correct duration tracking
     ref.read(callProvider).acceptCall();
 
     // Transition to active call page (voice or video)
+    // Use the consistent channelName: chan_<callId>
+    final consistentChannelName = 'chan_${widget.callId}';
     final Widget callPage = widget.callType == CallType.video
         ? VideoCallPage(
             currentUserId: widget.currentUserId, // Current user ID
             contactName: widget.contactName,
             contactProfilePic: widget.contactProfilePic,
-            channelName: widget.channelName,
+            channelName: consistentChannelName,
             callId: widget.callId,
             otherUserId: widget.contactId,
           )
@@ -200,7 +250,7 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
             contactName: widget.contactName,
             contactProfilePic: widget.contactProfilePic,
             callType: widget.callType,
-            channelName: widget.channelName,
+            channelName: consistentChannelName,
             callId: widget.callId,
             otherUserId: widget.contactId,
           );
@@ -223,6 +273,7 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
   void _scheduleAutoClose(CallStatus status) {
     _isEnded = true;
     _ringTimeoutTimer?.cancel();
+    _agoraService.leaveChannel();
     ref.read(callProvider).endCallWithStatus(status);
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) Navigator.of(context).pop();
@@ -233,6 +284,7 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
     if (_isEnded) return;
     _isEnded = true;
     _ringTimeoutTimer?.cancel();
+    _agoraService.leaveChannel();
 
     _signaling.endActiveCall(
       callId: widget.callId,
@@ -253,6 +305,10 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
     _unavailableSub?.cancel();
     _errorSub?.cancel();
     _missedSub?.cancel();
+    // Only leave Agora if call wasn't accepted (ActiveCallPage takes over)
+    if (!_callAccepted) {
+      _agoraService.leaveChannel();
+    }
     super.dispose();
   }
 

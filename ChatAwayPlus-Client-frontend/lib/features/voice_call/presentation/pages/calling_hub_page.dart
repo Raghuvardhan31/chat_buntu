@@ -237,17 +237,13 @@ class CallingHubPage extends ConsumerWidget {
     }
 
     final callId = 'call_${DateTime.now().millisecondsSinceEpoch}';
-    final channelName = 'ch_${contactId}_$callId';
+    // channelName must match what callProvider.initiateCall generates: 'chan_<callId>'
+    final channelName = 'chan_$callId';
 
-    ref
-        .read(callProvider.notifier)
-        .initiateCall(
-          callId: callId,
-          contactId: contactId,
-          contactName: contactName,
-          contactProfilePic: contactProfilePic,
-          callType: callType,
-        );
+    // NOTE: Do NOT call callProvider.initiateCall here.
+    // OutgoingCallPage._startCall will call it, which also sends the
+    // call:initiate signal to the server. Calling it here too would
+    // cause a duplicate signal with a potentially different channelName.
 
     final currentUserId = await TokenSecureStorage.instance.getCurrentUserIdUUID() ?? '';
 

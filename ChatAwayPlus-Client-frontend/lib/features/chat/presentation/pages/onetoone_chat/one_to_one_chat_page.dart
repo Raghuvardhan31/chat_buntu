@@ -364,10 +364,11 @@ class _OneToOneChatPageState extends ConsumerState<OneToOneChatPage>
 
       // 4. Generate IDs
       final String callId = const Uuid().v4();
-      final String channelName = AgoraConfig.generateOneToOneChannelName(
-        widget.currentUserId,
-        widget.receiverId,
-      );
+      // channelName must match what callProvider.initiateCall generates: 'chan_<callId>'
+      // Do NOT use AgoraConfig.generateOneToOneChannelName here — it produces
+      // 'CHAT_<id1>_<id2>' which differs from the provider's 'chan_<callId>',
+      // causing caller/callee to join different Agora channels.
+      final String channelName = 'chan_$callId';
       debugPrint(
         '📞 [_handleCall] IDs generated: callId=$callId, channel=$channelName',
       );

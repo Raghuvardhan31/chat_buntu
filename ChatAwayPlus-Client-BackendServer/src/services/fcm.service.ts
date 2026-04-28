@@ -2,9 +2,10 @@ import admin from "firebase-admin";
 import FcmDeviceToken from "../db/models/fcm-device-token.model";
 
 // Initialize Firebase Admin SDK (serviceAccountKey.json should be in project root)
-admin.initializeApp({
-  credential: admin.credential.cert(require("../../chatawayplus-firebase-adminsdk-fbsvc-0742cc9ed4.json"))
-});
+// Temporarily disabled — service account JSON file not present on this machine
+// admin.initializeApp({
+//   credential: admin.credential.cert(require("../../chatawayplus-firebase-adminsdk-fbsvc-0742cc9ed4.json"))
+// });
 // admin.initializeApp({
 //   credential: admin.credential.cert({
 //     projectId: process.env.FIREBASE_PROJECT_ID,

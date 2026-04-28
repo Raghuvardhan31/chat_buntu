@@ -36,6 +36,13 @@ export const setupCallHandlers = (io: Server, socket: Socket) => {
     }
 
     try {
+      // 0. Dedup guard — if this callId is already tracked, the client sent a duplicate event.
+      //    Silently ignore it to prevent SequelizeUniqueConstraintError.
+      if (activeCalls.has(callId)) {
+        console.log(`⚠️ [call:initiate] Duplicate event for callId ${callId}, ignoring.`);
+        return;
+      }
+
       // 1. Check if callee is already in a call (busy)
       let isBusy = false;
       for (const [_, call] of activeCalls) {
@@ -48,28 +55,41 @@ export const setupCallHandlers = (io: Server, socket: Socket) => {
       if (isBusy) {
         console.log(`📵 [call:initiate] Callee ${calleeId} is busy`);
         socket.emit("call:busy", { callId });
-        await CallLog.create({
+        // Use findOrCreate to be safe against any race where the callId already exists
+        await CallLog.findOrCreate({
+          where: { callId },
+          defaults: {
+            callId,
+            callerId,
+            calleeId,
+            callType,
+            channelName,
+            status: "busy",
+            startedAt: new Date(),
+          },
+        });
+        return;
+      }
+
+      // 2. Create database log entry (idempotent via findOrCreate)
+      const [_log, created] = await CallLog.findOrCreate({
+        where: { callId },
+        defaults: {
           callId,
           callerId,
           calleeId,
           callType,
           channelName,
-          status: "busy",
+          status: "initiated",
           startedAt: new Date(),
-        });
+        },
+      });
+
+      if (!created) {
+        // Record already exists — this is a duplicate event after processing started
+        console.log(`⚠️ [call:initiate] CallLog for ${callId} already exists, ignoring duplicate event.`);
         return;
       }
-
-      // 2. Create database log entry
-      await CallLog.create({
-        callId,
-        callerId,
-        calleeId,
-        callType,
-        channelName,
-        status: "initiated",
-        startedAt: new Date(),
-      });
 
       // 3. Set missed call timeout
       const timeoutId = setTimeout(async () => {

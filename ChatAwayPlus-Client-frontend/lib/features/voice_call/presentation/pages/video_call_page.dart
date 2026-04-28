@@ -155,29 +155,38 @@ class _VideoCallPageState extends ConsumerState<VideoCallPage> {
     };
 
 
-    // Join video channel
-    if (mounted) {
-      setState(() => _callStatus = 'Connecting...');
-    }
+    // Check if already in Agora channel (caller pre-joined in OutgoingCallPage)
+    if (_agoraService.isInChannel) {
+      debugPrint('✅ VideoCallPage: Already in Agora channel (caller pre-joined)');
+      if (mounted) {
+        setState(() => _callStatus = 'Waiting for other party...');
+      }
+      await _agoraService.setSpeakerOn(true);
+    } else {
+      // Join video channel (callee flow or fallback)
+      if (mounted) {
+        setState(() => _callStatus = 'Connecting...');
+      }
 
-    // Convert current user ID to int for Agora UID
-    final currentUserId = AgoraConfig.uuidToUint32(widget.currentUserId);
-    debugPrint('📹 VideoCallPage: Using mapped UID for Agora: $currentUserId from UUID: ${widget.currentUserId}');
+      // Convert current user ID to int for Agora UID
+      final currentUserId = AgoraConfig.uuidToUint32(widget.currentUserId);
+      debugPrint('📹 VideoCallPage: Using mapped UID for Agora: $currentUserId from UUID: ${widget.currentUserId}');
 
-    final joined = await _agoraService.joinVideoCall(
-      channelName: widget.channelName,
-      uid: currentUserId, // Use backend user ID as Agora UID
-    );
+      final joined = await _agoraService.joinVideoCall(
+        channelName: widget.channelName,
+        uid: currentUserId,
+      );
 
-    // Enable speaker by default for video calls
-    await _agoraService.setSpeakerOn(true);
+      // Enable speaker by default for video calls
+      await _agoraService.setSpeakerOn(true);
 
-    if (!joined && mounted) {
-      setState(() {
-        _callStatus = 'Connection failed';
-        _isConnecting = false;
-      });
-      return;
+      if (!joined && mounted) {
+        setState(() {
+          _callStatus = 'Connection failed';
+          _isConnecting = false;
+        });
+        return;
+      }
     }
 
     // Start connection timeout

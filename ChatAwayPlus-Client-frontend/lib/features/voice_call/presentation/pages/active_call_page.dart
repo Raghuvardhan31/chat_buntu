@@ -189,35 +189,44 @@ class _ActiveCallPageState extends ConsumerState<ActiveCallPage>
     };
 
 
-    // Join Agora channel with static authentication
-    debugPrint(
-      '📞 ActiveCallPage: Joining Agora channel="${widget.channelName}" (static auth)',
-    );
+    // Check if already in Agora channel (caller pre-joined in OutgoingCallPage)
+    if (_agoraService.isInChannel) {
+      debugPrint('✅ ActiveCallPage: Already in Agora channel (caller pre-joined)');
+      if (mounted) {
+        setState(() => _callStatus = 'Waiting for other party...');
+      }
+      await _agoraService.setSpeakerOn(_isSpeakerOn);
+    } else {
+      // Join Agora channel (callee flow or fallback)
+      debugPrint(
+        '📞 ActiveCallPage: Joining Agora channel="${widget.channelName}" (static auth)',
+      );
 
-    if (mounted) {
-      setState(() => _callStatus = 'Connecting...');
-    }
+      if (mounted) {
+        setState(() => _callStatus = 'Connecting...');
+      }
 
-    // Convert current user ID to int for Agora UID
-    final currentUserId = AgoraConfig.uuidToUint32(widget.currentUserId);
-    debugPrint('📞 ActiveCallPage: Using mapped UID for Agora: $currentUserId from UUID: ${widget.currentUserId}');
+      // Convert current user ID to int for Agora UID
+      final currentUserId = AgoraConfig.uuidToUint32(widget.currentUserId);
+      debugPrint('📞 ActiveCallPage: Using mapped UID for Agora: $currentUserId from UUID: ${widget.currentUserId}');
 
-    final joined = await _agoraService.joinVoiceCall(
-      channelName: widget.channelName,
-      uid: currentUserId, // Use backend user ID as Agora UID
-    );
+      final joined = await _agoraService.joinVoiceCall(
+        channelName: widget.channelName,
+        uid: currentUserId,
+      );
 
-    // Ensure speaker state is applied after join too
-    await _agoraService.setSpeakerOn(_isSpeakerOn);
+      // Ensure speaker state is applied after join too
+      await _agoraService.setSpeakerOn(_isSpeakerOn);
 
-    debugPrint('📞 ActiveCallPage: joinVoiceCall result=$joined');
-    if (!joined && mounted) {
-      debugPrint('❌ ActiveCallPage: FAILED TO JOIN CHANNEL');
-      setState(() {
-        _callStatus = 'Connection failed';
-        _isConnecting = false;
-      });
-      return;
+      debugPrint('📞 ActiveCallPage: joinVoiceCall result=$joined');
+      if (!joined && mounted) {
+        debugPrint('❌ ActiveCallPage: FAILED TO JOIN CHANNEL');
+        setState(() {
+          _callStatus = 'Connection failed';
+          _isConnecting = false;
+        });
+        return;
+      }
     }
 
     // Start connection timeout — if remote user doesn't join within the

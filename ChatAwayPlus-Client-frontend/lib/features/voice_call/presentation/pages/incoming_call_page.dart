@@ -10,7 +10,7 @@ import 'package:chataway_plus/features/voice_call/presentation/widgets/call_avat
 import 'package:chataway_plus/features/voice_call/presentation/widgets/call_action_button.dart';
 import 'package:chataway_plus/features/voice_call/presentation/pages/active_call_page.dart';
 import 'package:chataway_plus/features/voice_call/presentation/pages/video_call_page.dart';
-import 'package:chataway_plus/core/routes/route_names.dart';
+
 
 /// Full-screen incoming call page
 /// Shown when a call is received — displays caller info with accept/reject buttons
@@ -347,17 +347,34 @@ class _IncomingCallPageState extends ConsumerState<IncomingCallPage>
 
     if (!mounted) return;
     
-    Navigator.of(context).pushReplacementNamed(
-      RouteNames.joinCall,
-      arguments: {
-        'currentUserId': widget.currentUserId,
-        'callId': widget.callId,
-        'contactId': widget.callerId,
-        'contactName': widget.contactName,
-        'contactProfilePic': widget.contactProfilePic,
-        'callType': widget.callType,
-        'channelName': widget.channelName,
-      },
+    // Navigate directly to the call page (skip JoinCallPage for seamless experience)
+    final Widget callPage = widget.callType == CallType.video
+        ? VideoCallPage(
+            currentUserId: widget.currentUserId,
+            contactName: widget.contactName,
+            contactProfilePic: widget.contactProfilePic,
+            channelName: widget.channelName,
+            callId: widget.callId,
+            otherUserId: widget.callerId,
+          )
+        : ActiveCallPage(
+            currentUserId: widget.currentUserId,
+            contactName: widget.contactName,
+            contactProfilePic: widget.contactProfilePic,
+            callType: widget.callType,
+            channelName: widget.channelName,
+            callId: widget.callId,
+            otherUserId: widget.callerId,
+          );
+
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => callPage,
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+        transitionDuration: const Duration(milliseconds: 300),
+      ),
     );
   }
 
