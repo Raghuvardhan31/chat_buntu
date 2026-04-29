@@ -14,6 +14,9 @@ import 'package:chataway_plus/features/voice_call/data/config/agora_config.dart'
 /// Active/Ongoing voice call page with real Agora RTC integration
 /// Shows call timer, contact info, and action buttons (mute, speaker, end)
 /// Modern dark gradient design inspired by WhatsApp & iOS call screens
+///
+/// IMPORTANT: User can ONLY leave by pressing the end-call button.
+/// No back button, no system back gesture — just like a real phone call.
 class ActiveCallPage extends ConsumerStatefulWidget {
   final String currentUserId; // Current user ID
   final String contactName;
@@ -51,11 +54,12 @@ class _ActiveCallPageState extends ConsumerState<ActiveCallPage>
   bool _isConnecting = true;
   String _callStatus = 'Connecting...';
   StreamSubscription? _callEndedSub;
+  StreamSubscription? _callMissedSub;
   bool _hasEnded = false;
 
   /// Timeout for Agora connection — if no remote user joins within this time,
   /// auto-end the call instead of staying stuck on 'Connecting...' forever.
-  static const Duration _connectionTimeout = Duration(seconds: 30);
+  static const Duration _connectionTimeout = Duration(seconds: 45);
 
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
@@ -80,10 +84,17 @@ class _ActiveCallPageState extends ConsumerState<ActiveCallPage>
     _callEndedSub = CallSignalingService.instance.callEndedStream.listen((
       callId,
     ) {
-      if (!_hasEnded &&
-          mounted &&
-          (widget.callId == null || callId == widget.callId)) {
+      if (!_hasEnded && mounted && callId == widget.callId) {
         _endCall(reason: 'Other party ended the call');
+      }
+    });
+
+    // Listen for missed call signal (server timeout)
+    _callMissedSub = CallSignalingService.instance.callMissedStream.listen((
+      callId,
+    ) {
+      if (!_hasEnded && mounted && callId == widget.callId) {
+        _endCall(reason: 'Call timed out');
       }
     });
   }
@@ -103,7 +114,7 @@ class _ActiveCallPageState extends ConsumerState<ActiveCallPage>
       return;
     }
 
-    // Initialize engine
+    // Initialize engine — always creates a fresh engine
     final initialized = await _agoraService.initialize();
     if (!initialized || !mounted) {
       if (mounted) {
@@ -144,14 +155,14 @@ class _ActiveCallPageState extends ConsumerState<ActiveCallPage>
 
     _agoraService.onRemoteUserLeft = (int uid, String reason) {
       debugPrint('📴 ActiveCallPage: Remote user $uid left. Reason: $reason');
-      if (mounted) {
+      if (mounted && !_hasEnded) {
         _endCall(reason: reason);
       }
     };
 
     _agoraService.onCallEnded = (String reason) {
       debugPrint('📴 ActiveCallPage: Call ended event. Reason: $reason');
-      if (mounted) {
+      if (mounted && !_hasEnded) {
         _endCall(reason: reason);
       }
     };
@@ -190,7 +201,7 @@ class _ActiveCallPageState extends ConsumerState<ActiveCallPage>
 
 
     // Check if already in Agora channel (caller pre-joined in OutgoingCallPage)
-    if (_agoraService.isInChannel) {
+    if (_agoraService.isInChannel && _agoraService.currentChannelName == widget.channelName) {
       debugPrint('✅ ActiveCallPage: Already in Agora channel (caller pre-joined)');
       if (mounted) {
         setState(() => _callStatus = 'Waiting for other party...');
@@ -256,6 +267,7 @@ class _ActiveCallPageState extends ConsumerState<ActiveCallPage>
     _callTimer?.cancel();
     _connectionTimeoutTimer?.cancel();
     _callEndedSub?.cancel();
+    _callMissedSub?.cancel();
     _fadeController.dispose();
     // Clean up Agora callbacks
     _agoraService.onCallConnected = null;
@@ -291,10 +303,10 @@ class _ActiveCallPageState extends ConsumerState<ActiveCallPage>
         );
 
         return PopScope(
+          // Block ALL back navigation — user MUST use the end-call button
           canPop: false,
           onPopInvokedWithResult: (didPop, _) {
-            if (didPop) return;
-            _handleBackPress();
+            // Do nothing — no back navigation allowed during call
           },
           child: Scaffold(
             resizeToAvoidBottomInset: false,
@@ -325,7 +337,7 @@ class _ActiveCallPageState extends ConsumerState<ActiveCallPage>
                       child: Column(
                         children: [
                           SizedBox(height: responsive.spacing(16)),
-                          // Top bar with back button and encryption label
+                          // Top bar — encryption label only, NO back button
                           _buildTopBar(responsive),
                           SizedBox(height: responsive.spacing(50)),
                           // Avatar
@@ -370,7 +382,7 @@ class _ActiveCallPageState extends ConsumerState<ActiveCallPage>
                           if (_isConnected) _buildAudioWave(responsive),
                           if (_isConnected)
                             SizedBox(height: responsive.spacing(40)),
-                          // Action buttons
+                          // Action buttons — ONLY mute, speaker, and end call
                           _buildActionButtons(responsive),
                           SizedBox(height: responsive.spacing(30)),
                           // End call button
@@ -389,55 +401,12 @@ class _ActiveCallPageState extends ConsumerState<ActiveCallPage>
     );
   }
 
-  void _handleBackPress() {
-    if (_hasEnded) {
-      Navigator.of(context).pop();
-      return;
-    }
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Call in progress'),
-        content: const Text('Please disconnect the call before leaving.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Continue call'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              _endCall(reason: 'User ended call');
-            },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('End call'),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildTopBar(ResponsiveSize responsive) {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: responsive.spacing(16)),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          GestureDetector(
-            onTap: _handleBackPress,
-            child: Container(
-              padding: EdgeInsets.all(responsive.spacing(8)),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(responsive.size(12)),
-              ),
-              child: Icon(
-                Icons.keyboard_arrow_down_rounded,
-                color: Colors.white.withValues(alpha: 0.7),
-                size: responsive.size(24),
-              ),
-            ),
-          ),
-          const Spacer(),
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -457,8 +426,6 @@ class _ActiveCallPageState extends ConsumerState<ActiveCallPage>
               ),
             ],
           ),
-          const Spacer(),
-          SizedBox(width: responsive.size(40)),
         ],
       ),
     );
@@ -540,19 +507,6 @@ class _ActiveCallPageState extends ConsumerState<ActiveCallPage>
             isActive: _isSpeakerOn,
             onTap: _toggleSpeaker,
           ),
-          CallActionButton(
-            icon: Icons.bluetooth_audio_rounded,
-            label: 'Bluetooth',
-            onTap: () {
-              // Cycle through Bluetooth or just try to enable it
-              // Typically the OS handles this if a headset is connected,
-              // but we can explicitly request the route.
-              _agoraService.setAudioRoute(AudioRoute.routeBluetoothDeviceHfp);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Attempting to connect Bluetooth audio...'), duration: Duration(seconds: 1)),
-              );
-            },
-          ),
         ],
       ),
     );
@@ -578,22 +532,21 @@ class _ActiveCallPageState extends ConsumerState<ActiveCallPage>
     if (_hasEnded) return;
     _hasEnded = true;
     _callTimer?.cancel();
+    _connectionTimeoutTimer?.cancel();
 
     // Signal server that the call has ended
-    if (widget.callId != null && widget.otherUserId != null) {
-      CallSignalingService.instance
-          .endActiveCall(
-            callId: widget.callId!,
-            otherUserId: widget.otherUserId!,
-          )
-          .then((ok) {
-            if (!ok) {
-              debugPrint(
-                '❌ ActiveCallPage: endActiveCall failed for callId=${widget.callId}',
-              );
-            }
-          });
-    }
+    CallSignalingService.instance
+        .endActiveCall(
+          callId: widget.callId,
+          otherUserId: widget.otherUserId,
+        )
+        .then((ok) {
+          if (!ok) {
+            debugPrint(
+              '❌ ActiveCallPage: endActiveCall failed for callId=${widget.callId}',
+            );
+          }
+        });
 
     ref.read(callProvider).endCall();
     _agoraService.leaveChannel();

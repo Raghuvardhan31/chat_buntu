@@ -1,6 +1,7 @@
 import 'package:chataway_plus/features/chat/presentation/widgets/common/chat_profile_quick_actions_sheet.dart';
 import 'package:chataway_plus/features/voice_call/presentation/pages/outgoing_call_page.dart';
 import 'package:chataway_plus/features/voice_call/data/models/call_model.dart';
+import 'package:uuid/uuid.dart';
 import 'package:chataway_plus/features/chat/presentation/pages/media_viewer/app_user_chat_picture_view.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -593,9 +594,10 @@ class _ChatListPageState extends ConsumerState<ChatListPage>
 
                           if (!mounted) return;
 
-                          final callId =
-                              'call_${DateTime.now().millisecondsSinceEpoch}';
-                          final channelName = 'channel_$callId';
+                          // Use UUID for callId and 'chan_$callId' for channel
+                          // MUST match the pattern used everywhere else
+                          final callId = const Uuid().v4();
+                          final channelName = 'chan_$callId';
                           await Navigator.of(context, rootNavigator: true).push(
                             MaterialPageRoute(
                               builder: (_) => OutgoingCallPage(

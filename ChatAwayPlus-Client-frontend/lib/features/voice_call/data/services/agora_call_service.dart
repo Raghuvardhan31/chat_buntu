@@ -13,7 +13,11 @@ typedef OnCallError = void Function(String error);
 typedef OnConnectionStateChanged = void Function(ConnectionStateType state, ConnectionChangedReasonType reason);
 
 /// Service that wraps Agora RTC Engine for voice/video calling
-/// Handles engine lifecycle, channel join/leave, and audio controls
+/// Handles engine lifecycle, channel join/leave, and audio controls.
+///
+/// **Reliability strategy**: The engine is fully released and recreated
+/// between calls. This avoids stale handler/state problems that caused
+/// "works on first call, fails on second" behaviour.
 class AgoraCallService {
   AgoraCallService._();
   static final AgoraCallService instance = AgoraCallService._();
@@ -21,10 +25,12 @@ class AgoraCallService {
   RtcEngine? _engine;
   bool _isInitialized = false;
   bool _isInChannel = false;
+  String? _currentChannelName;
   ConnectionStateType _connectionState = ConnectionStateType.connectionStateDisconnected;
 
   bool get isInitialized => _isInitialized;
   bool get isInChannel => _isInChannel;
+  String? get currentChannelName => _currentChannelName;
   ConnectionStateType get connectionState => _connectionState;
 
   // Event callbacks
@@ -62,11 +68,25 @@ class AgoraCallService {
     return micGranted && camGranted;
   }
 
-  /// Initialize the Agora RTC Engine
+  /// Initialize the Agora RTC Engine.
+  /// If the engine is already initialized, it is released first to ensure
+  /// a clean slate — this is the key fix for "second call fails".
   Future<bool> initialize() async {
-    if (_isInitialized && _engine != null) {
-      debugPrint('✅ AgoraCallService: Already initialized');
-      return true;
+    // Always start fresh — release any previous engine
+    if (_engine != null) {
+      debugPrint('🔄 AgoraCallService: Releasing previous engine before re-init');
+      try {
+        if (_isInChannel) {
+          await _engine!.leaveChannel();
+        }
+        await _engine!.release();
+      } catch (e) {
+        debugPrint('⚠️ AgoraCallService: Error releasing previous engine: $e');
+      }
+      _engine = null;
+      _isInitialized = false;
+      _isInChannel = false;
+      _currentChannelName = null;
     }
 
     try {
@@ -88,6 +108,7 @@ class AgoraCallService {
               '✅ AgoraCallService: Joined channel ${connection.channelId} in ${elapsed}ms',
             );
             _isInChannel = true;
+            _currentChannelName = connection.channelId;
             _connectionStateController.add('connected');
             onCallConnected?.call();
           },
@@ -96,6 +117,7 @@ class AgoraCallService {
               '📴 AgoraCallService: Left channel. Duration: ${stats.duration}s',
             );
             _isInChannel = false;
+            _currentChannelName = null;
             _connectionStateController.add('disconnected');
           },
           onUserJoined: (RtcConnection connection, int remoteUid, int elapsed) {
@@ -187,6 +209,8 @@ class AgoraCallService {
     if (_isInChannel) {
       debugPrint('⚠️ AgoraCallService: Already in a channel, leaving first...');
       await leaveChannel();
+      // Small delay to let the engine settle after leaving
+      await Future.delayed(const Duration(milliseconds: 300));
     }
 
     try {
@@ -251,6 +275,8 @@ class AgoraCallService {
     if (_isInChannel) {
       debugPrint('⚠️ AgoraCallService: Already in a channel, leaving first...');
       await leaveChannel();
+      // Small delay to let the engine settle after leaving
+      await Future.delayed(const Duration(milliseconds: 300));
     }
 
     try {
@@ -295,20 +321,45 @@ class AgoraCallService {
   }
 
 
-  /// Leave the current channel
+  /// Leave the current channel and fully release the engine.
+  /// This ensures the next call starts with a completely fresh engine,
+  /// preventing "works first time, fails next" problems.
   Future<void> leaveChannel() async {
-    if (_engine == null) return;
+    if (_engine == null) {
+      _isInChannel = false;
+      _currentChannelName = null;
+      return;
+    }
 
     try {
       if (_isInChannel) {
         await _engine!.leaveChannel();
       }
-      _isInChannel = false;
-      debugPrint('📴 AgoraCallService: Left channel');
     } catch (e) {
       debugPrint('❌ AgoraCallService: Leave channel failed: $e');
-      _isInChannel = false;
     }
+
+    // Fully release the engine so the next call gets a fresh one
+    try {
+      await _engine!.release();
+    } catch (e) {
+      debugPrint('❌ AgoraCallService: Engine release failed: $e');
+    }
+
+    _engine = null;
+    _isInChannel = false;
+    _isInitialized = false;
+    _currentChannelName = null;
+
+    // Clear all callbacks to prevent stale references
+    onCallConnected = null;
+    onCallEnded = null;
+    onRemoteUserJoined = null;
+    onRemoteUserLeft = null;
+    onCallError = null;
+    onConnectionStateChanged = null;
+
+    debugPrint('📴 AgoraCallService: Left channel and released engine');
   }
 
   /// Toggle microphone mute
@@ -379,12 +430,11 @@ class AgoraCallService {
     try {
       if (_isInChannel) {
         await leaveChannel();
-      }
-      if (_engine != null) {
+      } else if (_engine != null) {
         await _engine!.release();
         _engine = null;
+        _isInitialized = false;
       }
-      _isInitialized = false;
       debugPrint('🧹 AgoraCallService: Disposed');
     } catch (e) {
       debugPrint('❌ AgoraCallService: Dispose failed: $e');

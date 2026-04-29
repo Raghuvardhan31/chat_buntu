@@ -13,6 +13,8 @@ class CallSocketEvents {
   static const String rejectCall = 'call:reject';
   static const String endCall = 'call:end';
   static const String callBusy = 'call:busy';
+  static const String incomingAck = 'call:incoming_ack';
+  static const String callState = 'call:state';
 
   // Server → Client (listen)
   static const String incomingCall = 'call:incoming';
@@ -23,6 +25,7 @@ class CallSocketEvents {
   static const String callRinging = 'call:ringing';
   static const String callError = 'call:error';
   static const String callMissed = 'call:missed';
+  static const String callStateResponse = 'call:state_response';
 
   // Call history & statistics (emit → listen)
   static const String getCallHistory = 'get-call-history';
@@ -168,6 +171,7 @@ class CallStatistics {
 }
 
 /// Represents an incoming call signal from the server
+/// Now includes createdAt/expiresAt for expiry checking
 @immutable
 class IncomingCallSignal {
   final String callId;
@@ -176,6 +180,8 @@ class IncomingCallSignal {
   final String? callerProfilePic;
   final CallType callType;
   final String channelName;
+  final int? createdAt;   // Unix timestamp ms from server
+  final int? expiresAt;   // Unix timestamp ms from server
 
   const IncomingCallSignal({
     required this.callId,
@@ -184,6 +190,8 @@ class IncomingCallSignal {
     this.callerProfilePic,
     required this.callType,
     required this.channelName,
+    this.createdAt,
+    this.expiresAt,
   });
 
   factory IncomingCallSignal.fromJson(Map<String, dynamic> json) {
@@ -196,7 +204,15 @@ class IncomingCallSignal {
           ? CallType.video
           : CallType.voice,
       channelName: (json['channelName'] ?? '').toString(),
+      createdAt: json['createdAt'] as int?,
+      expiresAt: json['expiresAt'] as int?,
     );
+  }
+
+  /// Check if this call invite has expired
+  bool get isExpired {
+    if (expiresAt == null) return false;
+    return DateTime.now().millisecondsSinceEpoch > expiresAt!;
   }
 }
 
@@ -252,6 +268,10 @@ class CallSignalingService {
   Stream<CallStatistics> get callStatisticsStream =>
       _callStatisticsController.stream;
 
+  /// Set of callIds we've already processed — prevents duplicate handling
+  /// of the same incoming call (e.g. from server retries)
+  final Set<String> _processedIncomingCallIds = {};
+
   /// Re-register listeners (e.g. after socket reconnection)
   void restartListening() {
     stopListening();
@@ -262,7 +282,7 @@ class CallSignalingService {
   void startListening() {
     final socket = _socketRepo.connectionManager.socket;
     if (socket == null) {
-      debugPrint('❌ CallSignaling: Socket is null, cannot start listening');
+      debugPrint('[CALL] signaling: Socket is null, cannot start listening');
       _isListening = false;
       _registeredSocket = null;
       return;
@@ -275,94 +295,106 @@ class CallSignalingService {
 
     // If listening on a DIFFERENT (old/dead) socket, clean up first
     if (_isListening && _registeredSocket != null) {
-      debugPrint(
-        '🔄 CallSignaling: Socket changed, re-registering listeners...',
-      );
+      debugPrint('[CALL] signaling: Socket changed, re-registering listeners');
       _removeListenersFromSocket();
     }
 
     _isListening = true;
     _registeredSocket = socket;
 
-    debugPrint(
-      '📞 CallSignaling: Starting call event listeners on socket ${socket.hashCode}...',
-    );
+    debugPrint('[CALL] signaling: Registering listeners on socket ${socket.hashCode}');
 
-    // Incoming call from another user
+    // ── Incoming call from another user ──
     socket.on(CallSocketEvents.incomingCall, (data) {
-      debugPrint('📞 CallSignaling: Incoming call received: $data');
+      debugPrint('[CALL] incoming received: $data');
       try {
         final signal = IncomingCallSignal.fromJson(
           data is Map ? Map<String, dynamic>.from(data) : {},
         );
+
+        // ── Dedup guard: ignore retries for already-processed callIds ──
+        if (_processedIncomingCallIds.contains(signal.callId)) {
+          debugPrint('[CALL] incoming IGNORED — already processed callId=${signal.callId}');
+          // Still send ack so server stops retrying
+          _sendIncomingAck(signal.callId);
+          return;
+        }
+
+        // ── Expiry guard: reject expired invites ──
+        if (signal.isExpired) {
+          debugPrint('[CALL] incoming IGNORED — expired callId=${signal.callId}');
+          _sendIncomingAck(signal.callId);
+          return;
+        }
+
+        // Mark as processed
+        _processedIncomingCallIds.add(signal.callId);
+
+        // Send ack to server (stops retry)
+        _sendIncomingAck(signal.callId);
+
+        // Forward to listeners
         _incomingCallController.add(signal);
       } catch (e) {
-        debugPrint('❌ CallSignaling: Failed to parse incoming call: $e');
+        debugPrint('[CALL] incoming parse error: $e');
       }
     });
 
-    // Callee accepted our call — CRITICAL: this triggers Agora join on caller side
+    // ── Callee accepted our call ──
     socket.on(CallSocketEvents.callAccepted, (data) {
-      debugPrint('✅ CallSignaling: Call accepted raw data: $data');
-      debugPrint('✅ CallSignaling: Data type: ${data.runtimeType}');
+      debugPrint('[CALL] accepted received: $data');
       final callId = _extractCallId(data);
-      debugPrint(
-        '✅ CallSignaling: Accepted callId=$callId',
-      );
       _callAcceptedController.add({
         'callId': callId,
         'channelName': (data is Map ? data['channelName'] : null)?.toString(),
       });
     });
 
-    // Callee rejected our call
+    // ── Callee rejected our call ──
     socket.on(CallSocketEvents.callRejected, (data) {
-      debugPrint('❌ CallSignaling: Call rejected: $data');
+      debugPrint('[CALL] rejected received: $data');
       final callId = _extractCallId(data);
       _callRejectedController.add(callId);
     });
 
-    // Call ended by the other party
+    // ── Call ended by the other party ──
     socket.on(CallSocketEvents.callEnded, (data) {
-      debugPrint('📴 CallSignaling: Call ended: $data');
+      debugPrint('[CALL] ended received: $data');
       final callId = _extractCallId(data);
       _callEndedController.add(callId);
     });
 
-    // Callee is unavailable (offline)
+    // ── Callee is unavailable (offline) ──
     socket.on(CallSocketEvents.callUnavailable, (data) {
-      debugPrint('📵 CallSignaling: Callee unavailable: $data');
+      debugPrint('[CALL] unavailable received: $data');
       final callId = _extractCallId(data);
       _callUnavailableController.add(callId);
     });
 
-    // Server confirms callee's phone is ringing
+    // ── Server confirms callee's phone is ringing ──
     socket.on(CallSocketEvents.callRinging, (data) {
-      debugPrint('🔔 CallSignaling: Callee ringing: $data');
+      debugPrint('[CALL] ringing received: $data');
       final callId = _extractCallId(data);
-      debugPrint(
-        '🔔 CallSignaling: Ringing callId=$callId',
-      );
       _callRingingController.add({'callId': callId});
     });
 
-    // Call error from server
+    // ── Call error from server ──
     socket.on(CallSocketEvents.callError, (data) {
-      debugPrint('❌ CallSignaling: Call error: $data');
+      debugPrint('[CALL] error received: $data');
       final message = _extractMessage(data);
       _callErrorController.add(message);
     });
 
-    // Call was missed (timeout on server side)
+    // ── Call was missed (timeout on server side) ──
     socket.on(CallSocketEvents.callMissed, (data) {
-      debugPrint('📵 CallSignaling: Call missed: $data');
+      debugPrint('[CALL] missed received: $data');
       final callId = _extractCallId(data);
       _callMissedController.add(callId);
     });
 
-    // Call history response
+    // ── Call history response ──
     socket.on(CallSocketEvents.callHistoryResponse, (data) {
-      debugPrint('📋 CallSignaling: Call history received');
+      debugPrint('[CALL] history received');
       try {
         final map = data is Map
             ? Map<String, dynamic>.from(data)
@@ -378,13 +410,12 @@ class CallSignalingService {
           _callHistoryController.add(entries);
         }
       } catch (e) {
-        debugPrint('❌ CallSignaling: Failed to parse call history: $e');
+        debugPrint('[CALL] history parse error: $e');
       }
     });
 
-    // Missed calls count response
+    // ── Missed calls count response ──
     socket.on(CallSocketEvents.missedCallsCountResponse, (data) {
-      debugPrint('📋 CallSignaling: Missed calls count received');
       try {
         final map = data is Map
             ? Map<String, dynamic>.from(data)
@@ -393,13 +424,12 @@ class CallSignalingService {
           _missedCallsCountController.add(map['count'] as int? ?? 0);
         }
       } catch (e) {
-        debugPrint('❌ CallSignaling: Failed to parse missed calls count: $e');
+        debugPrint('[CALL] missed count parse error: $e');
       }
     });
 
-    // Call statistics response
+    // ── Call statistics response ──
     socket.on(CallSocketEvents.callStatisticsResponse, (data) {
-      debugPrint('📊 CallSignaling: Call statistics received');
       try {
         final map = data is Map
             ? Map<String, dynamic>.from(data)
@@ -411,11 +441,19 @@ class CallSignalingService {
           _callStatisticsController.add(stats);
         }
       } catch (e) {
-        debugPrint('❌ CallSignaling: Failed to parse call statistics: $e');
+        debugPrint('[CALL] statistics parse error: $e');
       }
     });
 
-    debugPrint('✅ CallSignaling: All call event listeners registered');
+    debugPrint('[CALL] signaling: All listeners registered');
+  }
+
+  /// Send incoming_ack to server so it stops retrying
+  void _sendIncomingAck(String callId) {
+    final socket = _socketRepo.connectionManager.socket;
+    if (socket == null) return;
+    socket.emit(CallSocketEvents.incomingAck, {'callId': callId});
+    debugPrint('[CALL] incoming ack sent for callId=$callId');
   }
 
   /// Remove listeners from the current/registered socket without resetting state
@@ -446,7 +484,7 @@ class CallSignalingService {
     _isListening = false;
     _registeredSocket = null;
 
-    debugPrint('📴 CallSignaling: Listeners removed');
+    debugPrint('[CALL] signaling: Listeners removed');
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -455,48 +493,44 @@ class CallSignalingService {
 
   /// Initiate a call to another user
   /// Server will signal the callee and return ringing/unavailable/error
-  /// Ensures socket is connected and authenticated before emitting.
   Future<void> initiateCall({
     required String callId,
-    required String callerId, // Current user ID
-    required String calleeId, // Target user ID
+    required String callerId,
+    required String calleeId,
     required CallType callType,
     required String channelName,
+    String? callerName,
+    String? callerProfilePic,
   }) async {
-    // Ensure socket is connected and authenticated before initiating call
     final ready = await _socketRepo.ensureSocketReady(
       timeout: const Duration(seconds: 8),
     );
     if (!ready) {
-      debugPrint(
-        '❌ CallSignaling: Cannot initiate call - socket not ready after ensureSocketReady',
-      );
+      debugPrint('[CALL] initiate FAILED — socket not ready');
       _callErrorController.add('Not connected to server. Please try again.');
       return;
     }
 
     final socket = _socketRepo.connectionManager.socket;
     if (socket == null || !_socketRepo.isConnected) {
-      debugPrint(
-        '❌ CallSignaling: Cannot initiate call - socket not connected',
-      );
+      debugPrint('[CALL] initiate FAILED — socket not connected');
       _callErrorController.add('Not connected to server');
       return;
     }
 
-    // Ensure call signaling listeners are active (handles reconnections too)
+    // Ensure listeners are active
     startListening();
 
-    debugPrint(
-      '📞 CallSignaling: Initiating call from $callerId to $calleeId (type: ${callType.name})',
-    );
+    debugPrint('[CALL] initiate callId=$callId from=$callerId to=$calleeId type=${callType.name} channel=$channelName');
 
     socket.emit(CallSocketEvents.initiateCall, {
       'callId': callId,
-      'callerId': callerId, // Include current user ID
+      'callerId': callerId,
       'calleeId': calleeId,
       'callType': callType.name,
       'channelName': channelName,
+      'callerName': callerName,
+      'callerProfilePic': callerProfilePic,
     });
   }
 
@@ -504,7 +538,7 @@ class CallSignalingService {
   void joinSignalingRoom(String userId) {
     final socket = _socketRepo.connectionManager.socket;
     if (socket == null || !_socketRepo.isConnected) return;
-    debugPrint('👤 CallSignaling: Joining signaling room for user $userId');
+    debugPrint('[CALL] socket reconnect user registered userId=$userId');
     socket.emit('join', userId);
   }
 
@@ -512,31 +546,28 @@ class CallSignalingService {
   Future<bool> acceptIncomingCall({
     required String callId,
     required String callerId,
-    required String calleeId, // Current user ID accepting the call
+    required String calleeId,
     Duration timeout = const Duration(seconds: 8),
   }) async {
     final ready = await _socketRepo.ensureSocketReady(timeout: timeout);
     if (!ready) {
-      debugPrint(
-        '❌ CallSignaling: Cannot accept call - socket not ready after ensureSocketReady',
-      );
+      debugPrint('[CALL] accept FAILED — socket not ready');
       return false;
     }
 
-    // Ensure listeners are active (helps after reconnection)
     startListening();
 
     final socket = _socketRepo.connectionManager.socket;
     if (socket == null || !_socketRepo.isConnected) {
-      debugPrint('❌ CallSignaling: Cannot accept call - socket not connected');
+      debugPrint('[CALL] accept FAILED — socket not connected');
       return false;
     }
 
-    debugPrint('✅ CallSignaling: Accepting call $callId from $callerId as $calleeId');
+    debugPrint('[CALL] accepted callId=$callId callerId=$callerId calleeId=$calleeId');
     socket.emit(CallSocketEvents.acceptCall, {
       'callId': callId,
       'callerId': callerId,
-      'calleeId': calleeId, // Include who is accepting
+      'calleeId': calleeId,
     });
     return true;
   }
@@ -549,9 +580,7 @@ class CallSignalingService {
   }) async {
     final ready = await _socketRepo.ensureSocketReady(timeout: timeout);
     if (!ready) {
-      debugPrint(
-        '❌ CallSignaling: Cannot reject call - socket not ready after ensureSocketReady',
-      );
+      debugPrint('[CALL] reject FAILED — socket not ready');
       return false;
     }
 
@@ -559,11 +588,11 @@ class CallSignalingService {
 
     final socket = _socketRepo.connectionManager.socket;
     if (socket == null || !_socketRepo.isConnected) {
-      debugPrint('❌ CallSignaling: Cannot reject call - socket not connected');
+      debugPrint('[CALL] reject FAILED — socket not connected');
       return false;
     }
 
-    debugPrint('❌ CallSignaling: Rejecting call $callId from $callerId');
+    debugPrint('[CALL] rejected callId=$callId callerId=$callerId');
     socket.emit(CallSocketEvents.rejectCall, {
       'callId': callId,
       'callerId': callerId,
@@ -579,9 +608,7 @@ class CallSignalingService {
   }) async {
     final ready = await _socketRepo.ensureSocketReady(timeout: timeout);
     if (!ready) {
-      debugPrint(
-        '❌ CallSignaling: Cannot end call - socket not ready after ensureSocketReady',
-      );
+      debugPrint('[CALL] end FAILED — socket not ready');
       return false;
     }
 
@@ -589,11 +616,11 @@ class CallSignalingService {
 
     final socket = _socketRepo.connectionManager.socket;
     if (socket == null || !_socketRepo.isConnected) {
-      debugPrint('❌ CallSignaling: Cannot end call - socket not connected');
+      debugPrint('[CALL] end FAILED — socket not connected');
       return false;
     }
 
-    debugPrint('📴 CallSignaling: Ending call $callId');
+    debugPrint('[CALL] ended callId=$callId otherUserId=$otherUserId');
     socket.emit(CallSocketEvents.endCall, {
       'callId': callId,
       'otherUserId': otherUserId,
@@ -606,12 +633,60 @@ class CallSignalingService {
     final socket = _socketRepo.connectionManager.socket;
     if (socket == null || !_socketRepo.isConnected) return;
 
-    debugPrint('📵 CallSignaling: Sending busy for call $callId');
+    debugPrint('[CALL] busy sent callId=$callId callerId=$callerId');
 
     socket.emit(CallSocketEvents.callBusy, {
       'callId': callId,
       'callerId': callerId,
     });
+  }
+
+  /// Query the server for current active call state (for reconnection recovery)
+  Future<Map<String, dynamic>?> queryCallState(String userId) async {
+    final ready = await _socketRepo.ensureSocketReady(
+      timeout: const Duration(seconds: 5),
+    );
+    if (!ready) return null;
+
+    final socket = _socketRepo.connectionManager.socket;
+    if (socket == null || !_socketRepo.isConnected) return null;
+
+    final completer = Completer<Map<String, dynamic>?>();
+
+    // Listen for one-time response
+    void handler(dynamic data) {
+      if (completer.isCompleted) return;
+      if (data is Map) {
+        final map = Map<String, dynamic>.from(data);
+        final activeCall = map['activeCall'];
+        if (activeCall != null && activeCall is Map) {
+          completer.complete(Map<String, dynamic>.from(activeCall));
+        } else {
+          completer.complete(null);
+        }
+      } else {
+        completer.complete(null);
+      }
+    }
+
+    socket.on(CallSocketEvents.callStateResponse, handler);
+    socket.emit(CallSocketEvents.callState, {'userId': userId});
+
+    try {
+      final result = await completer.future.timeout(
+        const Duration(seconds: 5),
+        onTimeout: () => null,
+      );
+      return result;
+    } finally {
+      socket.off(CallSocketEvents.callStateResponse, handler);
+    }
+  }
+
+  /// Clear the processed incoming call IDs cache
+  /// Call this periodically or when the user is in idle state
+  void clearProcessedCallIds() {
+    _processedIncomingCallIds.clear();
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -651,12 +726,9 @@ class CallSignalingService {
     final socket = _socketRepo.connectionManager.socket;
     if (socket == null || !_socketRepo.isConnected) return;
 
-    // Ensure listeners are active to receive the response
     if (!_isListening) startListening();
 
-    debugPrint(
-      '📋 CallSignaling: Fetching call history (limit=$limit, offset=$offset)',
-    );
+    debugPrint('[CALL] fetching history (limit=$limit, offset=$offset)');
 
     final payload = <String, dynamic>{'limit': limit, 'offset': offset};
     if (callType != null) payload['callType'] = callType;
@@ -677,7 +749,6 @@ class CallSignalingService {
 
     if (!_isListening) startListening();
 
-    debugPrint('📋 CallSignaling: Fetching missed calls count');
     socket.emit(CallSocketEvents.getMissedCallsCount);
   }
 
@@ -685,8 +756,6 @@ class CallSignalingService {
   void fetchCallStatistics({String? startDate, String? endDate}) {
     final socket = _socketRepo.connectionManager.socket;
     if (socket == null || !_socketRepo.isConnected) return;
-
-    debugPrint('📊 CallSignaling: Fetching call statistics');
 
     final payload = <String, dynamic>{};
     if (startDate != null) payload['startDate'] = startDate;

@@ -45,6 +45,7 @@ class _IncomingCallPageState extends ConsumerState<IncomingCallPage>
   late Animation<double> _fadeAnimation;
   Timer? _autoRejectTimer;
   StreamSubscription? _callEndedSub;
+  StreamSubscription? _callMissedSub;
   bool _handled = false;
 
   /// Auto-reject after 30 seconds (Requirement: 30s timeout)
@@ -87,7 +88,20 @@ class _IncomingCallPageState extends ConsumerState<IncomingCallPage>
     });
 
     // Listen for caller ending the call while we're ringing
+    // Filter by callId to prevent stale events from other calls
     _callEndedSub = CallSignalingService.instance.callEndedStream.listen((
+      callId,
+    ) {
+      if (callId == widget.callId && !_handled && mounted) {
+        _handled = true;
+        _autoRejectTimer?.cancel();
+        ref.read(callProvider).endCallWithStatus(CallStatus.missed);
+        Navigator.of(context).pop();
+      }
+    });
+
+    // Listen for missed call signal (server timeout)
+    _callMissedSub = CallSignalingService.instance.callMissedStream.listen((
       callId,
     ) {
       if (callId == widget.callId && !_handled && mounted) {
@@ -117,6 +131,7 @@ class _IncomingCallPageState extends ConsumerState<IncomingCallPage>
   void dispose() {
     _autoRejectTimer?.cancel();
     _callEndedSub?.cancel();
+    _callMissedSub?.cancel();
     _fadeController.dispose();
     super.dispose();
   }
@@ -131,75 +146,79 @@ class _IncomingCallPageState extends ConsumerState<IncomingCallPage>
           breakpoint: breakpoint,
         );
 
-        return Scaffold(
-          resizeToAvoidBottomInset: false,
-          body: Container(
-            width: double.infinity,
-            height: double.infinity,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFF0F172A),
-                  Color(0xFF1E293B),
-                  Color(0xFF0F172A),
-                ],
+        return PopScope(
+          // Block back navigation — user must accept or reject
+          canPop: false,
+          onPopInvokedWithResult: (didPop, _) {
+            // Do nothing — no back navigation during incoming call
+          },
+          child: Scaffold(
+            resizeToAvoidBottomInset: false,
+            body: Container(
+              width: double.infinity,
+              height: double.infinity,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color(0xFF0F172A),
+                    Color(0xFF1E293B),
+                    Color(0xFF0F172A),
+                  ],
+                ),
               ),
-            ),
-            child: SafeArea(
-              child: SingleChildScrollView(
-                physics: const ClampingScrollPhysics(),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    minHeight: constraints.maxHeight - MediaQuery.of(context).padding.top - MediaQuery.of(context).padding.bottom,
-                  ),
-                  child: FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: Column(
-                      children: [
-                        SizedBox(height: responsive.spacing(60)),
-                        // Encrypted label
-                        _buildEncryptedLabel(responsive),
-                        SizedBox(height: responsive.spacing(40)),
-                        // Avatar with ripple
-                        CallAvatar(
-                          name: widget.contactName,
-                          profilePicUrl: widget.contactProfilePic,
-                          size: 120,
-                          showRipple: true,
-                        ),
-                        SizedBox(height: responsive.spacing(30)),
-                        // Contact name
-                        Text(
-                          widget.contactName,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: responsive.size(28),
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.5,
+              child: SafeArea(
+                child: SingleChildScrollView(
+                  physics: const ClampingScrollPhysics(),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight - MediaQuery.of(context).padding.top - MediaQuery.of(context).padding.bottom,
+                    ),
+                    child: FadeTransition(
+                      opacity: _fadeAnimation,
+                      child: Column(
+                        children: [
+                          SizedBox(height: responsive.spacing(60)),
+                          // Encrypted label
+                          _buildEncryptedLabel(responsive),
+                          SizedBox(height: responsive.spacing(40)),
+                          // Avatar with ripple
+                          CallAvatar(
+                            name: widget.contactName,
+                            profilePicUrl: widget.contactProfilePic,
+                            size: 120,
+                            showRipple: true,
                           ),
-                        ),
-                        SizedBox(height: responsive.spacing(10)),
-                        // Call type label
-                        Text(
-                          widget.callType == CallType.video
-                              ? 'Incoming Video Call...'
-                              : 'Incoming Voice Call...',
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.6),
-                            fontSize: responsive.size(16),
-                            fontWeight: FontWeight.w400,
+                          SizedBox(height: responsive.spacing(30)),
+                          // Contact name
+                          Text(
+                            widget.contactName,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: responsive.size(28),
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                            ),
                           ),
-                        ),
-                        SizedBox(height: responsive.spacing(40)),
-                        // Action buttons row
-                        _buildActionButtons(responsive),
-                        SizedBox(height: responsive.spacing(20)),
-                        // Swipe hint
-                        _buildSwipeHint(responsive),
-                        SizedBox(height: responsive.spacing(40)),
-                      ],
+                          SizedBox(height: responsive.spacing(10)),
+                          // Call type label
+                          Text(
+                            widget.callType == CallType.video
+                                ? 'Incoming Video Call...'
+                                : 'Incoming Voice Call...',
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.6),
+                              fontSize: responsive.size(16),
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                          SizedBox(height: responsive.spacing(40)),
+                          // Action buttons row — ONLY accept and reject
+                          _buildActionButtons(responsive),
+                          SizedBox(height: responsive.spacing(40)),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -235,7 +254,7 @@ class _IncomingCallPageState extends ConsumerState<IncomingCallPage>
 
   Widget _buildActionButtons(ResponsiveSize responsive) {
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: responsive.spacing(40)),
+      padding: EdgeInsets.symmetric(horizontal: responsive.spacing(60)),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -247,28 +266,6 @@ class _IncomingCallPageState extends ConsumerState<IncomingCallPage>
               SizedBox(height: responsive.spacing(10)),
               Text(
                 'Decline',
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.7),
-                  fontSize: responsive.size(13),
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-          // Message (optional action)
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CallActionButton(
-                icon: Icons.message_rounded,
-                label: '',
-                onTap: _rejectWithMessage,
-                backgroundColor: Colors.white.withValues(alpha: 0.12),
-                size: 55,
-              ),
-              SizedBox(height: responsive.spacing(10)),
-              Text(
-                'Message',
                 style: TextStyle(
                   color: Colors.white.withValues(alpha: 0.7),
                   fontSize: responsive.size(13),
@@ -294,16 +291,6 @@ class _IncomingCallPageState extends ConsumerState<IncomingCallPage>
             ],
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildSwipeHint(ResponsiveSize responsive) {
-    return Text(
-      'Swipe up to answer',
-      style: TextStyle(
-        color: Colors.white.withValues(alpha: 0.3),
-        fontSize: responsive.size(12),
       ),
     );
   }
@@ -376,12 +363,6 @@ class _IncomingCallPageState extends ConsumerState<IncomingCallPage>
         transitionDuration: const Duration(milliseconds: 300),
       ),
     );
-  }
-
-  /// Reject with message — same as reject but intended for future "reply with message" feature.
-  /// For now, just rejects the call properly (signals server + records history).
-  void _rejectWithMessage() {
-    _rejectCallAsync();
   }
 
   void _rejectCall() {

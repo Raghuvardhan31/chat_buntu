@@ -162,22 +162,28 @@ class _MeetingPageState extends ConsumerState<MeetingPage> {
           breakpoint: breakpoint,
         );
 
-        return Scaffold(
-          backgroundColor: const Color(0xFF0F172A),
-          body: Stack(
-            children: [
-              // 1. Participant Grid
-              _buildParticipantGrid(responsive),
+        return PopScope(
+          canPop: false,
+          onPopInvokedWithResult: (didPop, _) {
+            // Block back navigation — user must use end-call button
+          },
+          child: Scaffold(
+            backgroundColor: const Color(0xFF0F172A),
+            body: Stack(
+              children: [
+                // 1. Participant Grid
+                _buildParticipantGrid(responsive),
 
-              // 2. Top Header
-              _buildHeader(responsive),
+                // 2. Top Header
+                _buildHeader(responsive),
 
-              // 3. Bottom Controls
-              _buildControls(responsive),
+                // 3. Bottom Controls
+                _buildControls(responsive),
 
-              // 4. Connecting Overlay
-              if (_isConnecting) _buildConnectingOverlay(responsive),
-            ],
+                // 4. Connecting Overlay
+                if (_isConnecting) _buildConnectingOverlay(responsive),
+              ],
+            ),
           ),
         );
       },
@@ -354,10 +360,6 @@ class _MeetingPageState extends ConsumerState<MeetingPage> {
         ),
         child: Row(
           children: [
-            IconButton(
-              icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-              onPressed: () => _leaveMeeting(),
-            ),
             const SizedBox(width: 8),
             Expanded(
               child: Column(

@@ -11,7 +11,10 @@ import 'package:chataway_plus/features/voice_call/data/config/agora_config.dart'
 
 /// Full-screen video call page with real Agora RTC integration
 /// Shows local preview (small PiP), remote video (full screen),
-/// and action buttons (mute, speaker, camera switch, video toggle, end)
+/// and action buttons (mute, camera switch, video toggle, end)
+///
+/// IMPORTANT: User can ONLY leave by pressing the end-call button.
+/// No back button, no system back gesture — just like a real phone call.
 class VideoCallPage extends ConsumerStatefulWidget {
   final String currentUserId; // Current user ID
   final String contactName;
@@ -51,6 +54,7 @@ class _VideoCallPageState extends ConsumerState<VideoCallPage> {
   String _callStatus = 'Connecting...';
   Timer? _hideControlsTimer;
   StreamSubscription? _callEndedSub;
+  StreamSubscription? _callMissedSub;
   bool _hasEnded = false;
 
   @override
@@ -59,10 +63,18 @@ class _VideoCallPageState extends ConsumerState<VideoCallPage> {
     _initializeCall();
     _startHideControlsTimer();
 
-    // Listen for call-ended signal from other party (Scenario F: disconnect)
-    _callEndedSub = CallSignalingService.instance.callEndedStream.listen((_) {
-      if (!_hasEnded && mounted) {
+    // Listen for call-ended signal from other party
+    // Filter by callId to prevent cross-call interference
+    _callEndedSub = CallSignalingService.instance.callEndedStream.listen((callId) {
+      if (!_hasEnded && mounted && callId == widget.callId) {
         _endCall(reason: 'Other party ended the call');
+      }
+    });
+
+    // Listen for missed call signal (server timeout)
+    _callMissedSub = CallSignalingService.instance.callMissedStream.listen((callId) {
+      if (!_hasEnded && mounted && callId == widget.callId) {
+        _endCall(reason: 'Call timed out');
       }
     });
   }
@@ -80,7 +92,7 @@ class _VideoCallPageState extends ConsumerState<VideoCallPage> {
       return;
     }
 
-    // Initialize engine
+    // Initialize engine — always creates a fresh engine
     final initialized = await _agoraService.initialize();
     if (!initialized || !mounted) {
       if (mounted) {
@@ -115,11 +127,11 @@ class _VideoCallPageState extends ConsumerState<VideoCallPage> {
     };
 
     _agoraService.onRemoteUserLeft = (int uid, String reason) {
-      if (mounted) _endCall(reason: reason);
+      if (mounted && !_hasEnded) _endCall(reason: reason);
     };
 
     _agoraService.onCallEnded = (String reason) {
-      if (mounted) _endCall(reason: reason);
+      if (mounted && !_hasEnded) _endCall(reason: reason);
     };
 
     _agoraService.onCallError = (error) {
@@ -156,7 +168,7 @@ class _VideoCallPageState extends ConsumerState<VideoCallPage> {
 
 
     // Check if already in Agora channel (caller pre-joined in OutgoingCallPage)
-    if (_agoraService.isInChannel) {
+    if (_agoraService.isInChannel && _agoraService.currentChannelName == widget.channelName) {
       debugPrint('✅ VideoCallPage: Already in Agora channel (caller pre-joined)');
       if (mounted) {
         setState(() => _callStatus = 'Waiting for other party...');
@@ -190,7 +202,7 @@ class _VideoCallPageState extends ConsumerState<VideoCallPage> {
     }
 
     // Start connection timeout
-    _connectionTimeoutTimer = Timer(const Duration(seconds: 30), () {
+    _connectionTimeoutTimer = Timer(const Duration(seconds: 45), () {
       if (!_isConnected && !_hasEnded && mounted) {
         debugPrint('⏰ VideoCallPage: Connection timeout. Other party never joined.');
         _endCall(reason: 'Connection timed out');
@@ -229,11 +241,14 @@ class _VideoCallPageState extends ConsumerState<VideoCallPage> {
     _connectionTimeoutTimer?.cancel();
     _hideControlsTimer?.cancel();
     _callEndedSub?.cancel();
+    _callMissedSub?.cancel();
     _agoraService.onCallConnected = null;
     _agoraService.onRemoteUserJoined = null;
     _agoraService.onRemoteUserLeft = null;
     _agoraService.onCallEnded = null;
-    _agoraService.leaveChannel();
+    if (!_hasEnded) {
+      _agoraService.leaveChannel();
+    }
     super.dispose();
   }
 
@@ -258,27 +273,34 @@ class _VideoCallPageState extends ConsumerState<VideoCallPage> {
           breakpoint: breakpoint,
         );
 
-        return Scaffold(
-          backgroundColor: const Color(0xFF0F172A),
-          body: GestureDetector(
-            onTap: _toggleControls,
-            child: Stack(
-              children: [
-                // Full screen remote video or waiting state
-                _buildRemoteVideo(responsive),
+        return PopScope(
+          // Block ALL back navigation — user MUST use the end-call button
+          canPop: false,
+          onPopInvokedWithResult: (didPop, _) {
+            // Do nothing — no back navigation allowed during call
+          },
+          child: Scaffold(
+            backgroundColor: const Color(0xFF0F172A),
+            body: GestureDetector(
+              onTap: _toggleControls,
+              child: Stack(
+                children: [
+                  // Full screen remote video or waiting state
+                  _buildRemoteVideo(responsive),
 
-                // Local video preview (PiP)
-                if (_isVideoEnabled) _buildLocalVideoPreview(responsive),
+                  // Local video preview (PiP)
+                  if (_isVideoEnabled) _buildLocalVideoPreview(responsive),
 
-                // Top bar overlay
-                if (_showControls) _buildTopOverlay(responsive),
+                  // Top bar overlay — NO back button, just info
+                  if (_showControls) _buildTopOverlay(responsive),
 
-                // Bottom controls overlay
-                if (_showControls) _buildBottomOverlay(responsive),
+                  // Bottom controls overlay
+                  if (_showControls) _buildBottomOverlay(responsive),
 
-                // Connecting overlay (shown before remote user joins)
-                if (!_isConnected) _buildConnectingOverlay(responsive),
-              ],
+                  // Connecting overlay (shown before remote user joins)
+                  if (!_isConnected) _buildConnectingOverlay(responsive),
+                ],
+              ),
             ),
           ),
         );
@@ -376,22 +398,6 @@ class _VideoCallPageState extends ConsumerState<VideoCallPage> {
         ),
         child: Row(
           children: [
-            // Back button
-            GestureDetector(
-              onTap: () => _endCall(),
-              child: Container(
-                padding: EdgeInsets.all(responsive.spacing(8)),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(responsive.size(12)),
-                ),
-                child: Icon(
-                  Icons.keyboard_arrow_down_rounded,
-                  color: Colors.white,
-                  size: responsive.size(24),
-                ),
-              ),
-            ),
             SizedBox(width: responsive.spacing(12)),
             // Contact info
             Expanded(
@@ -494,16 +500,6 @@ class _VideoCallPageState extends ConsumerState<VideoCallPage> {
               label: _isVideoEnabled ? 'Camera' : 'Camera Off',
               isActive: !_isVideoEnabled,
               onTap: _toggleVideo,
-              responsive: responsive,
-            ),
-            // Speaker
-            _buildVideoControlButton(
-              icon: _isSpeakerOn
-                  ? Icons.volume_up_rounded
-                  : Icons.volume_down_rounded,
-              label: 'Speaker',
-              isActive: _isSpeakerOn,
-              onTap: _toggleSpeaker,
               responsive: responsive,
             ),
             // End call
@@ -618,6 +614,34 @@ class _VideoCallPageState extends ConsumerState<VideoCallPage> {
               ),
             ],
           ),
+          // Show end-call button during connecting too
+          SizedBox(height: responsive.spacing(40)),
+          GestureDetector(
+            onTap: () => _endCall(),
+            child: Container(
+              width: responsive.size(64),
+              height: responsive.size(64),
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: [Color(0xFFEF4444), Color(0xFFDC2626)],
+                ),
+              ),
+              child: Icon(
+                Icons.call_end_rounded,
+                color: Colors.white,
+                size: responsive.size(30),
+              ),
+            ),
+          ),
+          SizedBox(height: responsive.spacing(8)),
+          Text(
+            'End Call',
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.6),
+              fontSize: responsive.size(13),
+            ),
+          ),
         ],
       ),
     );
@@ -651,14 +675,13 @@ class _VideoCallPageState extends ConsumerState<VideoCallPage> {
     _hasEnded = true;
     _callTimer?.cancel();
     _hideControlsTimer?.cancel();
+    _connectionTimeoutTimer?.cancel();
 
     // Signal server that the call has ended
-    if (widget.callId != null && widget.otherUserId != null) {
-      CallSignalingService.instance.endActiveCall(
-        callId: widget.callId!,
-        otherUserId: widget.otherUserId!,
-      );
-    }
+    CallSignalingService.instance.endActiveCall(
+      callId: widget.callId,
+      otherUserId: widget.otherUserId,
+    );
 
     ref.read(callProvider).endCall();
     _agoraService.leaveChannel();
