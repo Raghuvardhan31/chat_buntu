@@ -46,10 +46,13 @@ class _IncomingCallPageState extends ConsumerState<IncomingCallPage>
   Timer? _autoRejectTimer;
   StreamSubscription? _callEndedSub;
   StreamSubscription? _callMissedSub;
+  StreamSubscription? _callAcceptedSub;
+  StreamSubscription? _callRejectedSub;
   bool _handled = false;
 
   /// Auto-reject after 30 seconds (Requirement: 30s timeout)
-  static const Duration _autoRejectTimeout = Duration(seconds: 30);
+  /// Auto-reject after 35 seconds (Safety margin: favor server-side 30s timeout)
+  static const Duration _autoRejectTimeout = Duration(seconds: 35);
 
   @override
   void initState() {
@@ -93,6 +96,7 @@ class _IncomingCallPageState extends ConsumerState<IncomingCallPage>
       callId,
     ) {
       if (callId == widget.callId && !_handled && mounted) {
+        debugPrint('[CALL] incoming_page: call ended remotely');
         _handled = true;
         _autoRejectTimer?.cancel();
         ref.read(callProvider).endCallWithStatus(CallStatus.missed);
@@ -105,6 +109,34 @@ class _IncomingCallPageState extends ConsumerState<IncomingCallPage>
       callId,
     ) {
       if (callId == widget.callId && !_handled && mounted) {
+        debugPrint('[CALL] incoming_page: call missed (server timeout)');
+        _handled = true;
+        _autoRejectTimer?.cancel();
+        ref.read(callProvider).endCallWithStatus(CallStatus.missed);
+        Navigator.of(context).pop();
+      }
+    });
+
+    // Listen for call accepted (e.g. by another device of same user)
+    _callAcceptedSub = CallSignalingService.instance.callAcceptedStream.listen((
+      data,
+    ) {
+      final callId = data['callId'];
+      if (callId == widget.callId && !_handled && mounted) {
+        debugPrint('[CALL] incoming_page: call accepted by another device');
+        _handled = true;
+        _autoRejectTimer?.cancel();
+        // Just pop, don't update callProvider status as it was handled elsewhere
+        Navigator.of(context).pop();
+      }
+    });
+
+    // Listen for call rejected (e.g. by another device of same user)
+    _callRejectedSub = CallSignalingService.instance.callRejectedStream.listen((
+      callId,
+    ) {
+      if (callId == widget.callId && !_handled && mounted) {
+        debugPrint('[CALL] incoming_page: call rejected remotely');
         _handled = true;
         _autoRejectTimer?.cancel();
         ref.read(callProvider).endCallWithStatus(CallStatus.missed);
@@ -132,6 +164,8 @@ class _IncomingCallPageState extends ConsumerState<IncomingCallPage>
     _autoRejectTimer?.cancel();
     _callEndedSub?.cancel();
     _callMissedSub?.cancel();
+    _callAcceptedSub?.cancel();
+    _callRejectedSub?.cancel();
     _fadeController.dispose();
     super.dispose();
   }

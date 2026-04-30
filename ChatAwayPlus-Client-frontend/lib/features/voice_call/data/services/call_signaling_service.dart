@@ -312,10 +312,9 @@ class CallSignalingService {
           data is Map ? Map<String, dynamic>.from(data) : {},
         );
 
-        // ── Dedup guard: ignore retries for already-processed callIds ──
+        // ── Dedup guard: ignore if already processed ──
         if (_processedIncomingCallIds.contains(signal.callId)) {
           debugPrint('[CALL] incoming IGNORED — already processed callId=${signal.callId}');
-          // Still send ack so server stops retrying
           _sendIncomingAck(signal.callId);
           return;
         }
@@ -327,10 +326,10 @@ class CallSignalingService {
           return;
         }
 
-        // Mark as processed
+        // Mark as processed immediately
         _processedIncomingCallIds.add(signal.callId);
 
-        // Send ack to server (stops retry)
+        // Send ack to server immediately to stop retries
         _sendIncomingAck(signal.callId);
 
         // Forward to listeners
@@ -340,28 +339,37 @@ class CallSignalingService {
       }
     });
 
-    // ── Callee accepted our call ──
+    // ── Call accepted (by us or peer) ──
     socket.on(CallSocketEvents.callAccepted, (data) {
       debugPrint('[CALL] accepted received: $data');
       final callId = _extractCallId(data);
-      _callAcceptedController.add({
-        'callId': callId,
-        'channelName': (data is Map ? data['channelName'] : null)?.toString(),
-      });
+      if (callId.isNotEmpty) {
+        _processedIncomingCallIds.add(callId);
+        _callAcceptedController.add({
+          'callId': callId,
+          'channelName': (data is Map ? data['channelName'] : null)?.toString(),
+        });
+      }
     });
 
-    // ── Callee rejected our call ──
+    // ── Call rejected (by us or peer) ──
     socket.on(CallSocketEvents.callRejected, (data) {
       debugPrint('[CALL] rejected received: $data');
       final callId = _extractCallId(data);
-      _callRejectedController.add(callId);
+      if (callId.isNotEmpty) {
+        _processedIncomingCallIds.add(callId);
+        _callRejectedController.add(callId);
+      }
     });
 
-    // ── Call ended by the other party ──
+    // ── Call ended (by us or peer) ──
     socket.on(CallSocketEvents.callEnded, (data) {
       debugPrint('[CALL] ended received: $data');
       final callId = _extractCallId(data);
-      _callEndedController.add(callId);
+      if (callId.isNotEmpty) {
+        _processedIncomingCallIds.add(callId);
+        _callEndedController.add(callId);
+      }
     });
 
     // ── Callee is unavailable (offline) ──
@@ -389,7 +397,10 @@ class CallSignalingService {
     socket.on(CallSocketEvents.callMissed, (data) {
       debugPrint('[CALL] missed received: $data');
       final callId = _extractCallId(data);
-      _callMissedController.add(callId);
+      if (callId.isNotEmpty) {
+        _processedIncomingCallIds.add(callId);
+        _callMissedController.add(callId);
+      }
     });
 
     // ── Call history response ──

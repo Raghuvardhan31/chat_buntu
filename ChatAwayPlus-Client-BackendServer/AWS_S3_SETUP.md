@@ -188,7 +188,7 @@ Type 'S3' is missing the following properties from type 'S3Client'
 
 ### Upload Profile Picture:
 ```bash
-curl -X GET http://192.168.1.2:3200/api/stories/contacts \
+curl -X GET http://192.168.1.14:3200/api/stories/contacts \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -F "chatawaypluspic=@/path/to/image.jpg" \
   -F "name=John Doe"
@@ -196,7 +196,7 @@ curl -X GET http://192.168.1.2:3200/api/stories/contacts \
 
 ### Upload Location Photos:
 ```bash
-curl -X POST http://192.168.1.2:3200/api/stories \
+curl -X POST http://192.168.1.14:3200/api/stories \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -F "name=Beautiful Beach" \
   -F "description=Sunset view" \

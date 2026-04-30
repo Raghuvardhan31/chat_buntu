@@ -49,6 +49,9 @@ class _VideoCallPageState extends ConsumerState<VideoCallPage> {
   bool _showControls = true;
   bool _hasEnded = false;
 
+  // ✅ false = remote big, local small. true = local big, remote small.
+  bool _isLocalVideoBig = false;
+
   int? _remoteUid;
   String _callStatus = 'Connecting...';
 
@@ -290,8 +293,17 @@ class _VideoCallPageState extends ConsumerState<VideoCallPage> {
               onTap: _toggleControls,
               child: Stack(
                 children: [
-                  _buildRemoteVideo(responsive),
-                  if (_isVideoEnabled) _buildLocalVideoPreview(responsive),
+                  // ✅ Big video area
+                  _isLocalVideoBig
+                      ? _buildLocalVideoFullScreen(responsive)
+                      : _buildRemoteVideo(responsive),
+
+                  // ✅ Small video preview
+                  if (_isConnected)
+                    _isLocalVideoBig
+                        ? _buildRemoteVideoPreview(responsive)
+                        : _buildLocalVideoPreview(responsive),
+
                   if (_showControls) _buildTopOverlay(responsive),
                   if (_showControls) _buildBottomOverlay(responsive),
                   if (!_isConnected) _buildConnectingOverlay(responsive),
@@ -306,18 +318,127 @@ class _VideoCallPageState extends ConsumerState<VideoCallPage> {
 
   Widget _buildRemoteVideo(ResponsiveSize responsive) {
     if (_remoteUid != null && _agoraService.engine != null) {
-      return SizedBox.expand(
-        child: AgoraVideoView(
-          controller: VideoViewController.remote(
-            rtcEngine: _agoraService.engine!,
-            canvas: VideoCanvas(uid: _remoteUid!),
-            connection: RtcConnection(channelId: widget.channelName),
-            useFlutterTexture: false,
+      return GestureDetector(
+        onTap: _toggleControls,
+        child: SizedBox.expand(
+          child: AgoraVideoView(
+            controller: VideoViewController.remote(
+              rtcEngine: _agoraService.engine!,
+              canvas: VideoCanvas(uid: _remoteUid!),
+              connection: RtcConnection(channelId: widget.channelName),
+              useFlutterTexture: false,
+            ),
           ),
         ),
       );
     }
 
+    return _buildWaitingBackground();
+  }
+
+  Widget _buildLocalVideoFullScreen(ResponsiveSize responsive) {
+    if (_agoraService.engine == null || !_isVideoEnabled) {
+      return _buildWaitingBackground();
+    }
+
+    return GestureDetector(
+      onTap: _toggleControls,
+      child: SizedBox.expand(
+        child: AgoraVideoView(
+          controller: VideoViewController(
+            rtcEngine: _agoraService.engine!,
+            canvas: const VideoCanvas(uid: 0),
+            useFlutterTexture: false,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLocalVideoPreview(ResponsiveSize responsive) {
+    if (_agoraService.engine == null || !_isVideoEnabled) {
+      return const SizedBox.shrink();
+    }
+
+    return Positioned(
+      top: responsive.spacing(60),
+      right: responsive.spacing(16),
+      child: GestureDetector(
+        onTap: () {
+          setState(() => _isLocalVideoBig = true);
+          _startHideControlsTimer();
+        },
+        child: _previewContainer(
+          responsive: responsive,
+          child: AgoraVideoView(
+            controller: VideoViewController(
+              rtcEngine: _agoraService.engine!,
+              canvas: const VideoCanvas(uid: 0),
+              useFlutterTexture: false,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRemoteVideoPreview(ResponsiveSize responsive) {
+    if (_remoteUid == null || _agoraService.engine == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Positioned(
+      top: responsive.spacing(60),
+      right: responsive.spacing(16),
+      child: GestureDetector(
+        onTap: () {
+          setState(() => _isLocalVideoBig = false);
+          _startHideControlsTimer();
+        },
+        child: _previewContainer(
+          responsive: responsive,
+          child: AgoraVideoView(
+            controller: VideoViewController.remote(
+              rtcEngine: _agoraService.engine!,
+              canvas: VideoCanvas(uid: _remoteUid!),
+              connection: RtcConnection(channelId: widget.channelName),
+              useFlutterTexture: false,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _previewContainer({
+    required ResponsiveSize responsive,
+    required Widget child,
+  }) {
+    return Container(
+      width: responsive.size(120),
+      height: responsive.size(160),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(responsive.size(16)),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.3),
+          width: 2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.4),
+            blurRadius: 12,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(responsive.size(14)),
+        child: child,
+      ),
+    );
+  }
+
+  Widget _buildWaitingBackground() {
     return Container(
       width: double.infinity,
       height: double.infinity,
@@ -330,45 +451,6 @@ class _VideoCallPageState extends ConsumerState<VideoCallPage> {
             Color(0xFF1E293B),
             Color(0xFF0F172A),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLocalVideoPreview(ResponsiveSize responsive) {
-    if (_agoraService.engine == null) {
-      return const SizedBox.shrink();
-    }
-
-    return Positioned(
-      top: responsive.spacing(60),
-      right: responsive.spacing(16),
-      child: Container(
-        width: responsive.size(120),
-        height: responsive.size(160),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(responsive.size(16)),
-          border: Border.all(
-            color: Colors.white.withValues(alpha: 0.3),
-            width: 2,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.4),
-              blurRadius: 12,
-              spreadRadius: 2,
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(responsive.size(14)),
-          child: AgoraVideoView(
-            controller: VideoViewController(
-              rtcEngine: _agoraService.engine!,
-              canvas: const VideoCanvas(uid: 0),
-              useFlutterTexture: false,
-            ),
-          ),
         ),
       ),
     );
@@ -485,8 +567,6 @@ class _VideoCallPageState extends ConsumerState<VideoCallPage> {
               onTap: _toggleMute,
               responsive: responsive,
             ),
-
-            // ✅ Added speaker button
             _buildVideoControlButton(
               icon: _isSpeakerOn
                   ? Icons.volume_up_rounded
@@ -496,14 +576,12 @@ class _VideoCallPageState extends ConsumerState<VideoCallPage> {
               onTap: _toggleSpeaker,
               responsive: responsive,
             ),
-
             _buildVideoControlButton(
               icon: Icons.cameraswitch_rounded,
               label: 'Flip',
               onTap: _switchCamera,
               responsive: responsive,
             ),
-
             _buildVideoControlButton(
               icon: _isVideoEnabled
                   ? Icons.videocam_rounded
@@ -513,7 +591,6 @@ class _VideoCallPageState extends ConsumerState<VideoCallPage> {
               onTap: _toggleVideo,
               responsive: responsive,
             ),
-
             GestureDetector(
               onTap: () => _endCall(),
               child: Container(
@@ -692,7 +769,12 @@ class _VideoCallPageState extends ConsumerState<VideoCallPage> {
     await _agoraService.setVideoEnabled(newEnabled);
 
     if (mounted) {
-      setState(() => _isVideoEnabled = newEnabled);
+      setState(() {
+        _isVideoEnabled = newEnabled;
+        if (!_isVideoEnabled) {
+          _isLocalVideoBig = false;
+        }
+      });
     }
   }
 

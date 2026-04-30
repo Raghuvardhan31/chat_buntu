@@ -127,6 +127,8 @@ class WebSocketChatRepository {
       const MessageStatusEventsHandler();
   final ProfileEventsHandler _profileEventsHandler =
       const ProfileEventsHandler();
+  final List<VoidCallback> _onConnectedListeners = [];
+  final List<VoidCallback> _onDisconnectedListeners = [];
 
   // ═══════════════════════════════════════════════════════════════════════════
   // SECTION 6: PUBLIC GETTERS
@@ -857,8 +859,7 @@ class WebSocketChatRepository {
   Function(Map<String, dynamic>)? _onMessageUnstarred;
   Function(String)? _onStarMessageError;
   Function(String)? _onUnstarMessageError;
-  Function()? _onConnected;
-  Function()? _onDisconnected;
+  // Connection listeners are now managed via _onConnectedListeners and _onDisconnectedListeners
   Function(Map<String, dynamic>)? _onMessageStatusUpdate;
   Function(UserStatus)? _onUserStatusChanged;
   Function(Map<String, dynamic>)? _onForceDisconnect;
@@ -956,7 +957,13 @@ class WebSocketChatRepository {
         _socketConnectionManager.setConnected(true);
         _isAuthenticated = false;
         _socketAuthManager.setAuthenticated(false);
-        _onConnected?.call();
+        for (final listener in _onConnectedListeners) {
+          try {
+            listener();
+          } catch (e) {
+            debugPrint('❌ Error in onConnected listener: $e');
+          }
+        }
         _authenticateUser();
       },
       onConnectError: (error) {
@@ -970,7 +977,13 @@ class WebSocketChatRepository {
         _socketConnectionManager.setConnected(false);
         _isAuthenticated = false;
         _socketAuthManager.setAuthenticated(false);
-        _onDisconnected?.call();
+        for (final listener in _onDisconnectedListeners) {
+          try {
+            listener();
+          } catch (e) {
+            debugPrint('❌ Error in onDisconnected listener: $e');
+          }
+        }
       },
       onError: (error) {
         debugPrint('❌ ChatRepository: Socket error: $error');
@@ -1235,7 +1248,13 @@ class WebSocketChatRepository {
         _socketConnectionManager.setConnected(false);
         _isAuthenticated = false;
         _socketAuthManager.setAuthenticated(false);
-        _onDisconnected?.call();
+        for (final listener in _onDisconnectedListeners) {
+          try {
+            listener();
+          } catch (e) {
+            debugPrint('❌ Error in onDisconnected listener: $e');
+          }
+        }
 
         // Ensure the underlying socket is actually disconnected
         // (backend asked us to terminate this session)
@@ -2029,12 +2048,22 @@ class WebSocketChatRepository {
   }
 
   /// Register callback for connection status
+  // Callbacks are now managed via _onConnectedListeners and _onDisconnectedListeners lists
   void onConnectionChanged({
-    Function()? onConnected,
-    Function()? onDisconnected,
+    VoidCallback? onConnected,
+    VoidCallback? onDisconnected,
   }) {
-    _onConnected = onConnected;
-    _onDisconnected = onDisconnected;
+    if (onConnected != null) _onConnectedListeners.add(onConnected);
+    if (onDisconnected != null) _onDisconnectedListeners.add(onDisconnected);
+  }
+
+  /// Remove connection listeners
+  void removeConnectionListeners({
+    VoidCallback? onConnected,
+    VoidCallback? onDisconnected,
+  }) {
+    if (onConnected != null) _onConnectedListeners.remove(onConnected);
+    if (onDisconnected != null) _onDisconnectedListeners.remove(onDisconnected);
   }
 
   /// Clear all callbacks to prevent duplicate processing
@@ -2052,8 +2081,8 @@ class WebSocketChatRepository {
     _onMessageUnstarred = null;
     _onStarMessageError = null;
     _onUnstarMessageError = null;
-    _onConnected = null;
-    _onDisconnected = null;
+    _onConnectedListeners.clear();
+    _onDisconnectedListeners.clear();
     _onMessageStatusUpdate = null;
     _onUserStatusChanged = null;
     _onNewNotification = null;
@@ -2258,7 +2287,13 @@ class WebSocketChatRepository {
       _socketConnectionManager.setConnected(false);
       _socketConnectionManager.detachSocket();
       _socketAuthManager.setAuthenticated(false);
-      _onDisconnected?.call();
+      for (final listener in _onDisconnectedListeners) {
+        try {
+          listener();
+        } catch (e) {
+          debugPrint('❌ Error in onDisconnected listener: $e');
+        }
+      }
     }
   }
 
@@ -2268,8 +2303,8 @@ class WebSocketChatRepository {
     _onNewMessage = null;
     _onMessageSent = null;
     _onMessageError = null;
-    _onConnected = null;
-    _onDisconnected = null;
+    _onConnectedListeners.clear();
+    _onDisconnectedListeners.clear();
     _pendingStatusUpdates.clear();
 
     try {

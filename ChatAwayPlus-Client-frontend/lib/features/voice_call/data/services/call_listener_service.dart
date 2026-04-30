@@ -92,16 +92,20 @@ class CallListenerService {
 
   /// Set up reconnect handler to re-register userId after socket reconnect
   void _setupReconnectHandler() {
-    final socket = WebSocketChatRepository.instance.connectionManager.socket;
-    if (socket == null) return;
-
-    // socket.io-client fires 'connect' on reconnect
-    socket.on('connect', (_) {
-      debugPrint('[CALL] socket reconnect — re-registering signaling room');
-      _ensureSignalingRoom();
-      // Re-register listeners on new socket
-      CallSignalingService.instance.restartListening();
-    });
+    // Instead of listening to a single socket instance's 'connect' event
+    // (which might be cleared by clearListeners()), we listen to the repository's
+    // connection state which is more persistent.
+    WebSocketChatRepository.instance.onConnectionChanged(
+      onConnected: () {
+        debugPrint('[CALL] repository connected — re-registering signaling room');
+        _ensureSignalingRoom();
+        // Re-register listeners on the (potentially new) socket instance
+        CallSignalingService.instance.restartListening();
+      },
+      onDisconnected: () {
+        debugPrint('[CALL] repository disconnected');
+      },
+    );
   }
 
   /// Show the incoming call page as a full-screen route

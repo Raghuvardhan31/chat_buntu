@@ -4,7 +4,7 @@ export const production: Config = {
   env: 'production',
   port: parseInt(process.env.PORT || '3200'),
   database: {
-    host: process.env.DB_HOST || '192.168.1.2',
+    host: process.env.DB_HOST || '192.168.1.14',
     port: parseInt(process.env.DB_PORT || '3306'),
     username: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || '',

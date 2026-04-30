@@ -238,6 +238,15 @@ class SocketConnectionManager {
     if (value) {
       _resetBackoff();
       _startHeartbeat();
+
+      // ── CRITICAL: Join signaling room immediately on connection ──
+      final userId = _currentUserId;
+      final socket = _socket;
+      if (userId != null && socket != null) {
+        debugPrint('👤 Socket: Emitting join for $userId');
+        socket.emit('join', userId);
+      }
+
       if (!_connectedController.isClosed) {
         _connectedController.add(null);
       }

@@ -53,7 +53,7 @@ export class ChatService {
 
   constructor(config: ChatServiceConfig = {}) {
     this.config = {
-      baseUrl: process.env.WEBSOCKET_URL || 'http://192.168.1.2:3200',
+      baseUrl: process.env.WEBSOCKET_URL || 'http://192.168.1.14:3200',
       autoReconnect: true,
       reconnectAttempts: 5,
       reconnectDelay: 3000, // 3 seconds

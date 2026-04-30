@@ -1240,7 +1240,7 @@ var SocketWithoutUpgrade = class _SocketWithoutUpgrade extends Emitter {
     if (opts.hostname && !opts.port) {
       opts.port = this.secure ? "443" : "80";
     }
-    this.hostname = opts.hostname || (typeof location !== "undefined" ? location.hostname : "192.168.1.2");
+    this.hostname = opts.hostname || (typeof location !== "undefined" ? location.hostname : "192.168.1.14");
     this.port = opts.port || (typeof location !== "undefined" && location.port ? location.port : this.secure ? "443" : "80");
     this.transports = [];
     this._transportsByName = {};
@@ -1278,7 +1278,7 @@ var SocketWithoutUpgrade = class _SocketWithoutUpgrade extends Emitter {
         };
         addEventListener("beforeunload", this._beforeunloadEventListener, false);
       }
-      if (this.hostname !== "192.168.1.2") {
+      if (this.hostname !== "192.168.1.14") {
         this._offlineEventListener = () => {
           this._onClose("transport close", {
             description: "network connection lost"
@@ -3369,7 +3369,7 @@ Object.assign(lookup2, {
 
 // src/utils/ChatService.ts
 var ChatService = class {
-  constructor(baseUrl = typeof window !== "undefined" && window.WEBSOCKET_URL || "http://192.168.1.2:3200") {
+  constructor(baseUrl = typeof window !== "undefined" && window.WEBSOCKET_URL || "http://192.168.1.14:3200") {
     __publicField(this, "socket", null);
     __publicField(this, "token");
     __publicField(this, "userId");
