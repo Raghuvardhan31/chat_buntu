@@ -20,6 +20,9 @@ import 'package:chataway_plus/core/app_upgrade/app_upgrade_manager.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:chataway_plus/features/contacts/data/repositories/contacts_repository.dart';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:chataway_plus/features/group_chat/presentation/providers/group_providers.dart';
+
 const bool _enableAppGateVerboseLogs = false; // Disable verbose logs by default
 
 const String _statusPlaceholder = 'Write custom or tap to choose preset';
@@ -52,14 +55,14 @@ void _appGateLog(String message) {
 /// 5. Routes to appropriate screen (phone entry, profile, or chat list)
 ///
 /// Includes timeout protection to prevent indefinite loading.
-class AppGatePage extends StatefulWidget {
+class AppGatePage extends ConsumerStatefulWidget {
   const AppGatePage({super.key});
 
   @override
-  State<AppGatePage> createState() => _AppGatePageState();
+  ConsumerState<AppGatePage> createState() => _AppGatePageState();
 }
 
-class _AppGatePageState extends State<AppGatePage> {
+class _AppGatePageState extends ConsumerState<AppGatePage> {
   Timer? _maxWaitTimer;
   bool _navigated = false;
   String? _pendingRoute;
@@ -561,6 +564,9 @@ class _AppGatePageState extends State<AppGatePage> {
   /// Displays while route decision and database prewarming are in progress.
   @override
   Widget build(BuildContext context) {
+    // Initialize group chat listeners and re-join rooms
+    ref.watch(groupChatInitializerProvider);
+
     return ResponsiveLayoutBuilder(
       builder: (context, constraints, breakpoint) {
         final responsive = ResponsiveSize(

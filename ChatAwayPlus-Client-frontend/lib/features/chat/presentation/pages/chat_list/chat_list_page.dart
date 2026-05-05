@@ -32,6 +32,9 @@ import 'package:chataway_plus/features/chat/data/services/local/chat_picture_lik
 import 'package:chataway_plus/features/chat/presentation/pages/chat_list/widgets/chat_list_tile_widget.dart';
 import 'package:chataway_plus/features/chat/presentation/pages/chat_list/widgets/chat_list_empty_states.dart';
 import 'package:chataway_plus/features/chat/presentation/pages/chat_list/widgets/speed_dial_fab_widget.dart';
+import 'package:chataway_plus/features/chat/presentation/pages/chat_list/widgets/group_chat_list_tile_widget.dart';
+import 'package:chataway_plus/features/chat/presentation/providers/chat_list_providers/unified_chat_list_provider.dart';
+import 'package:chataway_plus/features/group_chat/presentation/providers/group_providers.dart';
 
 /// Global key for accessing ChatListPage state from MainNavigationPage
 final chatListPageKey = GlobalKey<_ChatListPageState>();
@@ -1066,29 +1069,19 @@ class _ChatListPageState extends ConsumerState<ChatListPage>
           Expanded(
             // WHATSAPP-STYLE: StreamBuilder for real-time reactive updates
             // ChatListStream is the single source of truth
-            child: StreamBuilder<List<ChatContactModel>>(
-              stream: ChatListStream.instance.stream,
-              initialData: ChatListStream.instance.currentList.isNotEmpty
-                  ? ChatListStream.instance.currentList
-                  : chatState.contacts,
+            child: StreamBuilder<List<UnifiedChatItem>>(
+              stream: ref.watch(unifiedChatListProvider.stream),
               builder: (context, snapshot) {
-                // Use stream data if available, fallback to provider
-                final streamData = snapshot.data ?? [];
-                final baseData = streamData.isNotEmpty
-                    ? streamData
-                    : chatState.contacts;
-
+                final unifiedData = snapshot.data ?? [];
+                
                 final searchText = _searchController.text.toLowerCase();
                 final filteredData = searchText.isEmpty
-                    ? baseData
-                    : baseData.where((contact) {
-                        final name =
-                            '${contact.user.firstName} ${contact.user.lastName}'
-                                .toLowerCase();
-                        return name.contains(searchText);
+                    ? unifiedData
+                    : unifiedData.where((item) {
+                        return item.name.toLowerCase().contains(searchText);
                       }).toList();
 
-                final data = _isSearching ? filteredData : baseData;
+                final data = filteredData;
 
                 if (chatState.error != null) {
                   return ChatListErrorState(
@@ -1105,36 +1098,48 @@ class _ChatListPageState extends ConsumerState<ChatListPage>
                     ),
                     itemCount: data.length,
                     itemBuilder: (context, index) {
-                      return ChatListTileWidget(
-                        contact: data[index],
-                        currentUserId: _currentUserId,
-                        responsive: responsive,
-                        onAvatarTap:
-                            (
-                              name,
-                              contactId,
-                              mobileNumber,
-                              chatPictureUrl,
-                              chatPictureVersion,
-                            ) {
-                              _showContactQuickActionsSheet(
-                                context: context,
-                                name: name,
-                                contactId: contactId,
-                                mobileNumber: mobileNumber,
-                                chatPictureUrl: chatPictureUrl,
-                                chatPictureVersion: chatPictureVersion,
-                              );
-                            },
-                        onNavigateBack: () async {
-                          if (mounted) {
-                            ref
-                                .read(chatListNotifierProvider.notifier)
-                                .forceRefreshContacts();
-                            await _loadNotificationCounts();
-                          }
-                        },
-                      );
+                      final item = data[index];
+                      if (item.isGroup) {
+                        return GroupChatListTileWidget(
+                          group: item.group!,
+                          currentUserId: _currentUserId,
+                          responsive: responsive,
+                          onNavigateBack: () async {
+                            ref.invalidate(myGroupsProvider);
+                          },
+                        );
+                      } else {
+                        return ChatListTileWidget(
+                          contact: item.contact!,
+                          currentUserId: _currentUserId,
+                          responsive: responsive,
+                          onAvatarTap:
+                              (
+                                name,
+                                contactId,
+                                mobileNumber,
+                                chatPictureUrl,
+                                chatPictureVersion,
+                              ) {
+                                _showContactQuickActionsSheet(
+                                  context: context,
+                                  name: name,
+                                  contactId: contactId,
+                                  mobileNumber: mobileNumber,
+                                  chatPictureUrl: chatPictureUrl,
+                                  chatPictureVersion: chatPictureVersion,
+                                );
+                              },
+                          onNavigateBack: () async {
+                            if (mounted) {
+                              ref
+                                  .read(chatListNotifierProvider.notifier)
+                                  .forceRefreshContacts();
+                              await _loadNotificationCounts();
+                            }
+                          },
+                        );
+                      }
                     },
                   );
                 }

@@ -18,6 +18,7 @@ class CachedCircleAvatar extends StatefulWidget {
   final Color backgroundColor;
   final Color iconColor;
   final String? contactName;
+  final bool isGroup;
 
   const CachedCircleAvatar({
     super.key,
@@ -27,6 +28,7 @@ class CachedCircleAvatar extends StatefulWidget {
     required this.backgroundColor,
     required this.iconColor,
     this.contactName,
+    this.isGroup = false,
   });
 
   // Deterministic color palette for initials avatars
@@ -281,7 +283,7 @@ class _CachedCircleAvatarState extends State<CachedCircleAvatar> {
       radius: widget.radius,
       backgroundColor: widget.backgroundColor,
       child: Icon(
-        Icons.person,
+        widget.isGroup ? Icons.groups : Icons.person,
         size: widget.radius * 1.2,
         color: widget.iconColor,
       ),

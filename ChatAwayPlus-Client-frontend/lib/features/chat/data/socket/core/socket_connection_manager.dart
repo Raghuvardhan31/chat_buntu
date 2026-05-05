@@ -14,6 +14,11 @@ class SocketInitializationResult {
 }
 
 class SocketConnectionManager {
+  static final SocketConnectionManager _instance =
+      SocketConnectionManager._internal();
+  factory SocketConnectionManager() => _instance;
+  SocketConnectionManager._internal();
+
   io.Socket? _socket;
   bool _isConnected = false;
 

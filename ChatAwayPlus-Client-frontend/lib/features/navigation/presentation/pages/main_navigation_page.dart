@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:chataway_plus/features/chat_stories/presentation/pages/chat_stories_page.dart'
     show ChatStoriesPage, chatStoriesPageKey;
 import 'package:chataway_plus/features/group_chat/presentation/pages/group_chat_page.dart';
+import 'package:chataway_plus/features/group_chat/presentation/pages/group_list_page.dart';
 import 'package:chataway_plus/features/voice_call/presentation/pages/call_history_page.dart';
 import 'package:chataway_plus/features/navigation/presentation/widgets/custom_bottom_nav_bar.dart';
 import 'package:chataway_plus/core/themes/colors/app_colors.dart';
@@ -69,7 +70,7 @@ class _MainNavigationPageState extends ConsumerState<MainNavigationPage> {
   late final List<Widget> _pages = [
     ChatListPage(key: chatListPageKey), // Index 0 - with global key
     ChatStoriesPage(key: chatStoriesPageKey), // Index 1 - with global key
-    const GroupChatPage(), // Index 2 - Group Chat (to be implemented by service team)
+    const GroupListPage(), // Index 2 - Groups List
     CallHistoryPage(key: callHistoryPageKey), // Index 3 - Calls
   ];
 

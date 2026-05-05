@@ -25,6 +25,11 @@ import 'package:chataway_plus/features/app_gate/presentation/app_gate_page.dart'
 
 import '../../features/voice_call/presentation/pages/join_call_page.dart';
 import '../../features/voice_call/data/models/call_model.dart';
+import '../../features/group_chat/presentation/pages/group_chat_page.dart';
+import '../../features/group_chat/presentation/pages/group_info_page.dart';
+import '../../features/group_chat/presentation/pages/create_group_select_members_page.dart';
+import '../../features/group_chat/presentation/pages/create_group_details_page.dart';
+import '../../features/group_chat/models/group_models.dart';
 
 /// =============================================================================
 /// APP ROUTER - CHATAWAY+ FLUTTER APPLICATION
@@ -195,6 +200,46 @@ class AppRouter {
         );
 
         return _slideFromLeftRoute(enhancedPage, settings);
+
+      // ── Group Chat Routes ────────────────────────────────────────────
+      case RouteNames.groupCreateSelectMembers:
+        return _slideFromLeftRoute(const CreateGroupSelectMembersPage(), settings);
+
+      case RouteNames.groupCreateDetails:
+        final gArgs = settings.arguments as Map<String, dynamic>? ?? {};
+        final gUserIds = (gArgs['selectedUserIds'] as List?)?.cast<String>() ?? [];
+        final gContacts = (gArgs['selectedContacts'] as List?)?.cast<dynamic>() ?? [];
+        return _slideFromLeftRoute(
+          CreateGroupDetailsPage(
+            selectedUserIds: gUserIds,
+            selectedContacts: gContacts.cast(),
+          ),
+          settings,
+        );
+
+      case RouteNames.groupChat:
+        final gcArgs = settings.arguments as Map<String, dynamic>?;
+        if (gcArgs == null || !gcArgs.containsKey('groupId')) {
+          return _errorRoute('Missing groupId for group chat');
+        }
+        return _slideFromLeftRoute(
+          GroupChatPage(
+            groupId: gcArgs['groupId'] as String,
+            groupName: gcArgs['groupName'] as String? ?? 'Group',
+            groupIcon: gcArgs['groupIcon'] as String?,
+          ),
+          settings,
+        );
+
+      case RouteNames.groupInfo:
+        final giArgs = settings.arguments as Map<String, dynamic>?;
+        if (giArgs == null || giArgs['group'] == null) {
+          return _errorRoute('Missing group for group info');
+        }
+        return _buildRoute(
+          GroupInfoPage(group: giArgs['group'] as GroupModel),
+          settings,
+        );
 
       default:
         debugPrint('❌ AppRouter: Unknown route: ${settings.name}');

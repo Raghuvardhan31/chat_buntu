@@ -21,7 +21,9 @@ import messageReactionRoutes from "./routes/message-reaction.routes";
 import storyRoutes from "./routes/story.routes";
 import callLogRoutes from "./routes/call-log.routes";
 import notificationRoutes from "./routes/notification.routes";
+import groupRoutes from "./routes/group.routes";
 import ChatController from "./controllers/chat.controller";
+import { setupGroupHandlers } from "./services/group-socket.service";
 import { config } from "./config";
 
 import { sendSmsRequest } from "./services/sms.service";
@@ -34,6 +36,8 @@ console.log(config.database);
 const app = express();
 app.use(cors());
 const httpServer = createServer(app);
+
+import jwt from "jsonwebtoken";
 
 // Configure Socket.IO with CORS and WebSocket transport
 const io = new SocketIOServer(httpServer, {
@@ -48,18 +52,61 @@ const io = new SocketIOServer(httpServer, {
   connectTimeout: 10000, // 10 seconds - Connection timeout
 });
 
+// Middleware for Socket.IO authentication
+io.use((socket, next) => {
+  try {
+    const authHeader = socket.handshake.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    
+    if (token && config.jwt?.secret) {
+      const decoded = jwt.verify(token, config.jwt.secret) as { id: string };
+      if (decoded && decoded.id) {
+        (socket as any).userId = decoded.id;
+        console.log(`🔒 Socket authenticated for user: ${decoded.id}`);
+        return next();
+      }
+    }
+    
+    // Fallback: If no token in headers, allow connection but userId will be set via 'join' event
+    // This maintains backward compatibility with clients that don't send headers yet
+    console.log(`⚠️ Socket connection without token header: ${socket.id}`);
+    next();
+  } catch (err) {
+    console.error('❌ Socket auth error:', err);
+    next();
+  }
+});
+
 // Handle connection events
 io.on("connection", (socket) => {
   console.log("Client connected:", socket.id);
 
+  // If authenticated via middleware, join the signaling room automatically
+  const authenticatedUserId = (socket as any).userId;
+  if (authenticatedUserId) {
+    socket.join(authenticatedUserId);
+    console.log(`👤 User ${authenticatedUserId} joined signaling room automatically`);
+  }
+
   // User joins a room named after their userId for targeted signaling
   socket.on("join", (userId: string) => {
     socket.join(userId);
+    // Attach userId to socket for use by feature handlers (e.g. group socket)
+    (socket as any).userId = userId;
     console.log(`👤 User ${userId} joined their signaling room`);
   });
 
   // Initialize Call Signaling Handlers
   require("./services/call-socket.service").setupCallHandlers(io, socket);
+
+  // Initialize Group Chat Socket Handlers
+  // Lazily read connectedUsers from chatController after it is created below
+  setTimeout(() => {
+    if ((global as any).__chatController) {
+      const connectedUsers = (global as any).__chatController.getConnectedUsers();
+      setupGroupHandlers(io, socket, connectedUsers);
+    }
+  }, 0);
 
   socket.on("disconnect", () => {
     console.log("Client disconnected:", socket.id);
@@ -68,6 +115,8 @@ io.on("connection", (socket) => {
 
 // Initialize chat controller with Socket.IO
 export const chatController = new ChatController(io);
+// Make chatController globally accessible so the group socket handler can read connectedUsers
+(global as any).__chatController = chatController;
 
 // Middleware
 app.use(express.json());
@@ -146,6 +195,7 @@ app.use("/api/reactions", messageReactionRoutes); // Message reactions
 app.use("/api/stories", storyRoutes); // Chat Stories feature
 app.use("/api/call-logs", callLogRoutes); // Call logs and history
 app.use("/api/notifications", notificationRoutes); // In-app notifications
+app.use("/api/groups", groupRoutes); // Group chat routes
 app.use("/api/test", testRoutes); // Test routes for development
 app.get("/api/test_sms", function (req, res) {
   sendSmsRequest("+918977191811", "12345");

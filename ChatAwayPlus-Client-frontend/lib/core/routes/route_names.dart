@@ -126,6 +126,22 @@ class RouteNames {
   static const String joinCall = '/join-call';
 
   // ================================================
+  // Group Chat Routes
+  // ================================================
+
+  /// Group chat screen
+  static const String groupChat = '/group-chat';
+
+  /// Group info / settings page
+  static const String groupInfo = '/group-info';
+
+  /// Create group — Step 1: select members
+  static const String groupCreateSelectMembers = '/group-create-select-members';
+
+  /// Create group — Step 2: name & details
+  static const String groupCreateDetails = '/group-create-details';
+
+  // ================================================
   // Helper Methods
   // ================================================
 
@@ -160,6 +176,10 @@ class RouteNames {
     chat,
     settings,
     profile,
+    groupChat,
+    groupInfo,
+    groupCreateSelectMembers,
+    groupCreateDetails,
   ];
 
   /// Check if a route name is valid

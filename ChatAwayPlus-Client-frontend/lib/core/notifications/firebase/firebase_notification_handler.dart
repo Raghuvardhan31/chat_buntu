@@ -920,6 +920,10 @@ class FirebaseNotificationHandler {
         case 'private_message': // Support backend's format
           await _handleChatMessage(message);
           break;
+        case 'group_message':
+        case 'group-message':
+          await _handleGroupMessageNotification(message);
+          break;
         case 'reaction':
         case 'message_reaction':
         case 'message-reaction':
@@ -2210,6 +2214,10 @@ class FirebaseNotificationHandler {
         case 'private_message':
           await _handleChatNotificationTap(data);
           break;
+        case 'group_message':
+        case 'group-message':
+          await _handleGroupNotificationTap(data);
+          break;
 
         case 'reaction':
         case 'message_reaction':
@@ -2356,6 +2364,64 @@ class FirebaseNotificationHandler {
       debugPrint('✅ [Navigation] Navigation to chat completed');
     } catch (e) {
       debugPrint('❌ [Navigation] Error navigating to chat: $e');
+    }
+  }
+
+  /// Handle group message notification tap
+  Future<void> _handleGroupNotificationTap(Map<String, dynamic> data) async {
+    try {
+      final groupId =
+          data['groupId'] as String? ?? data['group_id'] as String? ?? data['conversationId'] as String?;
+      if (groupId == null || groupId.isEmpty) {
+        debugPrint('❌ [Navigation] No groupId in notification data');
+        return;
+      }
+
+      final groupName = data['groupName'] as String? ?? data['group_name'] as String?;
+      final groupIcon = data['groupIcon'] as String? ?? data['group_icon'] as String?;
+
+      debugPrint('🚀 [Navigation] Navigating to group chat: $groupId');
+
+      await NavigationService.goToEnhancedGroupChat(
+        groupId: groupId,
+        groupName: groupName,
+        groupIcon: groupIcon,
+      );
+    } catch (e) {
+      debugPrint('❌ [Navigation] Error navigating to group chat: $e');
+    }
+  }
+
+  /// Handle group message notification (foreground)
+  Future<void> _handleGroupMessageNotification(RemoteMessage message) async {
+    try {
+      final data = message.data;
+      final groupId =
+          data['groupId'] as String? ?? data['group_id'] as String? ?? data['conversationId'] as String?;
+      if (groupId == null) return;
+
+      final senderName = data['senderFirstName'] as String? ?? data['senderName'] as String? ?? 'Someone';
+      final groupName = data['groupName'] as String? ?? data['group_name'] as String? ?? 'Group Chat';
+      final messageText = data['messageText'] as String? ?? data['message'] as String? ?? 'New message';
+      
+      final activeWith = ChatEngineService.instance.activeConversationUserId;
+      final isActiveChat = (activeWith != null && activeWith == groupId);
+
+      if (isActiveChat) {
+        debugPrint('🔕 [FCM] Suppressing group notification - user in chat');
+        return;
+      }
+
+      await _localNotificationService.showChatMessageNotification(
+        notificationId: message.messageId ?? DateTime.now().toString(),
+        senderName: '$senderName @ $groupName',
+        messageText: messageText,
+        conversationId: groupId,
+        senderId: groupId, // Use groupId as conversationId for navigation
+        messageType: 'group_message',
+      );
+    } catch (e) {
+      debugPrint('❌ [FCM] Error handling group message notification: $e');
     }
   }
 

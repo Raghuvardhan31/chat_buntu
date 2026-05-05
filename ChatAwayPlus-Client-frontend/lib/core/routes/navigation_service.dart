@@ -200,6 +200,41 @@ class NavigationService {
     await _nav?.pushNamed(RouteNames.draggableTest);
   }
 
+  static Future<void> goToGroupCreateSelectMembers() async {
+    await _nav?.pushNamed(RouteNames.groupCreateSelectMembers);
+  }
+
+  /// Navigate to enhanced group chat (used for notifications)
+  /// Ensures we're on chat list first, then navigates to group chat
+  static Future<void> goToEnhancedGroupChat({
+    required String groupId,
+    String? groupName,
+    String? groupIcon,
+  }) async {
+    debugPrint('🚀 [Navigation] goToEnhancedGroupChat CALLED for $groupId');
+    if (_nav == null) return;
+
+    debugPrint('Step 1: Navigating to main navigation (clearing stack)...');
+    await _nav?.pushNamedAndRemoveUntil(
+      RouteNames.mainNavigation,
+      (route) => false,
+    );
+
+    debugPrint('Step 2: Waiting 300ms for chat list to initialize...');
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    debugPrint('Step 3: Pushing group chat screen...');
+    await _nav?.pushNamed(
+      RouteNames.groupChat,
+      arguments: {
+        'groupId': groupId,
+        'groupName': groupName,
+        'groupIcon': groupIcon,
+      },
+    );
+    debugPrint('✅ [Navigation] Group chat pushed');
+  }
+
   static Future<void> goToHome() async {
     await _nav?.pushNamedAndRemoveUntil(RouteNames.home, (route) => false);
   }

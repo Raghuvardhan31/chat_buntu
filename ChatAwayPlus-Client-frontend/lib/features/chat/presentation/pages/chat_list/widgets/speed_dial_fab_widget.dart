@@ -129,6 +129,18 @@ class SpeedDialButtonsOverlay extends StatelessWidget {
           responsive: responsive,
           bottom:
               responsive.spacing(16) + bottomPadding + responsive.spacing(70),
+          label: 'New Group',
+          icon: Icons.groups_outlined,
+          onPressed: () {
+            onClose();
+            NavigationService.goToGroupCreateSelectMembers();
+          },
+        ),
+        _buildSpeedDialButton(
+          context: context,
+          responsive: responsive,
+          bottom:
+              responsive.spacing(16) + bottomPadding + responsive.spacing(130),
           label: 'Contacts Hub',
           icon: Icons.shortcut_outlined,
           onPressed: () {
@@ -140,7 +152,7 @@ class SpeedDialButtonsOverlay extends StatelessWidget {
           context: context,
           responsive: responsive,
           bottom:
-              responsive.spacing(16) + bottomPadding + responsive.spacing(130),
+              responsive.spacing(16) + bottomPadding + responsive.spacing(190),
           label: 'Express Hub',
           icon: Icons.mic,
           onPressed: () {
@@ -152,7 +164,7 @@ class SpeedDialButtonsOverlay extends StatelessWidget {
           context: context,
           responsive: responsive,
           bottom:
-              responsive.spacing(16) + bottomPadding + responsive.spacing(190),
+              responsive.spacing(16) + bottomPadding + responsive.spacing(250),
           label: 'Likes Hub',
           icon: Icons.favorite_rounded,
           onPressed: () {

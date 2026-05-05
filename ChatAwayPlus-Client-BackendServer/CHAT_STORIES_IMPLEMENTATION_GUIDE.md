@@ -104,7 +104,7 @@ Note:
 ### **1. Create Story (Option A: With Pre-uploaded Media URL)**
 
 ```bash
-curl -X POST http://192.168.1.14:3200/api/stories \
+curl -X POST http://192.168.1.17:3200/api/stories \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -142,7 +142,7 @@ curl -X POST http://192.168.1.14:3200/api/stories \
 ### **1. Create Story (Option B: Direct File Upload)**
 
 ```bash
-curl -X POST http://192.168.1.14:3200/api/stories \
+curl -X POST http://192.168.1.17:3200/api/stories \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -F "media=@/path/to/your/image.jpg" \
   -F "caption=Beautiful sunset!" \
@@ -178,7 +178,7 @@ curl -X POST http://192.168.1.14:3200/api/stories \
 ### **2. Get Contacts' Stories**
 
 ```bash
-curl -X GET http://192.168.1.14:3200/api/stories/contacts \
+curl -X GET http://192.168.1.17:3200/api/stories/contacts \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
@@ -257,7 +257,7 @@ curl -X GET http://192.168.1.14:3200/api/stories/contacts \
 ### **3. Get My Stories**
 
 ```bash
-curl -X GET http://192.168.1.14:3200/api/stories/my \
+curl -X GET http://192.168.1.17:3200/api/stories/my \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
@@ -304,7 +304,7 @@ curl -X GET http://192.168.1.14:3200/api/stories/my \
 ### **4. Get Specific User's Stories**
 
 ```bash
-curl -X GET http://192.168.1.14:3200/api/stories/user/USER_UUID_HERE \
+curl -X GET http://192.168.1.17:3200/api/stories/user/USER_UUID_HERE \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
@@ -336,7 +336,7 @@ curl -X GET http://192.168.1.14:3200/api/stories/user/USER_UUID_HERE \
 ### **5. Get Single Story Details**
 
 ```bash
-curl -X GET http://192.168.1.14:3200/api/stories/STORY_ID_HERE \
+curl -X GET http://192.168.1.17:3200/api/stories/STORY_ID_HERE \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
@@ -377,7 +377,7 @@ curl -X GET http://192.168.1.14:3200/api/stories/STORY_ID_HERE \
 ### **6. Mark Story as Viewed**
 
 ```bash
-curl -X POST http://192.168.1.14:3200/api/stories/STORY_ID_HERE/view \
+curl -X POST http://192.168.1.17:3200/api/stories/STORY_ID_HERE/view \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
@@ -415,7 +415,7 @@ curl -X POST http://192.168.1.14:3200/api/stories/STORY_ID_HERE/view \
 ### **7. Get Story Viewers (Owner Only)**
 
 ```bash
-curl -X GET http://192.168.1.14:3200/api/stories/STORY_ID_HERE/viewers \
+curl -X GET http://192.168.1.17:3200/api/stories/STORY_ID_HERE/viewers \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
@@ -475,7 +475,7 @@ curl -X GET http://192.168.1.14:3200/api/stories/STORY_ID_HERE/viewers \
 ### **8. Delete Story (Owner Only)**
 
 ```bash
-curl -X DELETE http://192.168.1.14:3200/api/stories/STORY_ID_HERE \
+curl -X DELETE http://192.168.1.17:3200/api/stories/STORY_ID_HERE \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
